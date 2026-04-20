@@ -298,24 +298,174 @@ class Phase4Reporter:
         return file_path
     
     def _generate_pdf(self, report_data: Dict[str, Any], filename: str) -> Path:
-        """生成 PDF 报告（需要安装 weasyprint 或 wkhtmltopdf）"""
+        """生成 PDF 报告（使用 weasyprint）"""
         logger.info("生成 PDF 报告...")
         
         try:
-            # 先生成 HTML
-            html_path = self.output_dir / filename.replace('.pdf', '.html')
-            self._generate_html(report_data, html_path.name)
+            from weasyprint import HTML, CSS
+            from weasyprint.text.fonts import FontConfiguration
             
-            # 转换为 PDF（如果安装了 weasyprint）
-            # from weasyprint import HTML
-            # HTML(html_path).write_pdf(self.output_dir / filename)
+            # 生成临时 HTML
+            html_content = self._generate_pdf_html(report_data)
             
-            logger.warning("PDF 生成需要安装 weasyprint，已跳过")
-            return html_path  # 返回 HTML 作为替代
+            # 配置字体
+            fonts = FontConfiguration()
+            
+            # 生成 PDF
+            html_doc = HTML(string=html_content)
+            css = CSS(string='''
+                @page {
+                    size: A4;
+                    margin: 2cm;
+                }
+                body {
+                    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+                    font-size: 11pt;
+                    line-height: 1.6;
+                }
+                .page-break {
+                    page-break-before: always;
+                }
+                h1, h2, h3 {
+                    page-break-after: avoid;
+                }
+                table {
+                    page-break-inside: avoid;
+                }
+            ''')
+            
+            pdf_path = self.output_dir / filename
+            html_doc.write_pdf(pdf_path, stylesheets=[css], font_config=fonts)
+            
+            logger.info(f"PDF 报告生成成功：{pdf_path}")
+            return pdf_path
+            
+        except ImportError:
+            logger.error("PDF 生成需要安装 weasyprint: pip install weasyprint")
+            # 生成一个说明文件替代
+            placeholder_path = self.output_dir / filename.replace('.pdf', '_placeholder.txt')
+            with open(placeholder_path, 'w', encoding='utf-8') as f:
+                f.write("PDF 生成需要安装 weasyprint 库\n")
+                f.write("安装命令：pip install weasyprint\n")
+                f.write(f"\n报告数据已保存到：{self.output_dir / filename.replace('.pdf', '.json')}\n")
+            return placeholder_path
             
         except Exception as e:
             logger.error(f"PDF 生成失败：{e}")
             raise
+    
+    def _generate_pdf_html(self, report_data: Dict[str, Any]) -> str:
+        """生成适合 PDF 的 HTML 内容"""
+        
+        html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>安全测试报告 - {report_data.get('target', 'Unknown')}</title>
+</head>
+<body>
+    <div class="header">
+        <h1>🔒 安全测试报告</h1>
+        <p><strong>目标:</strong> {report_data.get('target', 'Unknown')}</p>
+        <p><strong>测试时间:</strong> {report_data.get('start_time', 'N/A')}</p>
+        <p><strong>报告生成时间:</strong> {report_data.get('end_time', 'N/A')}</p>
+        <p><strong>执行时长:</strong> {report_data.get('duration', 'N/A')}</p>
+    </div>
+    
+    <div class="summary">
+        <h2>执行摘要</h2>
+        <table>
+            <tr>
+                <td><strong>风险评分</strong></td>
+                <td><strong>{report_data.get('risk_score', 0)}/100</strong></td>
+            </tr>
+            <tr>
+                <td><strong>风险等级</strong></td>
+                <td><strong>{report_data.get('risk_level', 'Unknown')}</strong></td>
+            </tr>
+            <tr>
+                <td><strong>发现资产</strong></td>
+                <td><strong>{report_data.get('assets_count', 0)} 个</strong></td>
+            </tr>
+            <tr>
+                <td><strong>发现漏洞</strong></td>
+                <td><strong>{report_data.get('vulnerabilities_count', 0)} 个</strong></td>
+            </tr>
+            <tr>
+                <td><strong>已验证漏洞</strong></td>
+                <td><strong>{report_data.get('verified_vulns_count', 0)} 个</strong></td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="page-break"></div>
+    
+    <div class="vulnerabilities">
+        <h2>漏洞详情</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>编号</th>
+                    <th>漏洞名称</th>
+                    <th>严重程度</th>
+                    <th>目标</th>
+                    <th>验证状态</th>
+                    <th>置信度</th>
+                </tr>
+            </thead>
+            <tbody>
+"""
+        
+        # 添加漏洞列表
+        vulns = report_data.get('vulnerabilities', [])
+        for i, vuln in enumerate(vulns, 1):
+            severity = vuln.get('severity', 'info').upper()
+            verified = '✅ 已验证' if vuln.get('verified') else '❌ 未验证'
+            confidence = f"{vuln.get('confidence', 0)*100:.0f}%" if vuln.get('confidence') else 'N/A'
+            
+            html += f"""
+                <tr>
+                    <td>{i}</td>
+                    <td><strong>{vuln.get('name', 'Unknown')}</strong><br/>
+                        <small>ID: {vuln.get('vuln_id', vuln.get('id', 'N/A'))}</small>
+                    </td>
+                    <td>{severity}</td>
+                    <td>{vuln.get('target', 'N/A')}</td>
+                    <td>{verified}</td>
+                    <td>{confidence}</td>
+                </tr>
+"""
+        
+        html += """
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="page-break"></div>
+    
+    <div class="appendix">
+        <h2>附录</h2>
+        
+        <h3>测试工具</h3>
+        <ul>
+            <li>Phase-0: 资产收集（WhatWeb, Nmap, Httpx, Subfinder）</li>
+            <li>Phase-1: 风险画像（智能分析）</li>
+            <li>Phase-2: 漏洞检测（Nuclei, Afrog, Nikto）</li>
+            <li>Phase-3: 漏洞验证（交叉验证）</li>
+            <li>Phase-4: 报告生成（多格式支持）</li>
+        </ul>
+        
+        <h3>免责声明</h3>
+        <p>本报告仅供授权的安全测试使用。未经书面许可，不得将本报告用于任何非法目的。</p>
+        
+        <p style="text-align: center; margin-top: 50px;">
+            <em>报告由智能测试编排器自动生成</em>
+        </p>
+    </div>
+</body>
+</html>
+"""
+        return html
     
     def generate_summary(self, report_data: Dict[str, Any]) -> str:
         """生成摘要信息"""

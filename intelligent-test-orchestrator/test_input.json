@@ -1,6 +1,1 @@
-{
-  "target": "http://zero.webappsecurity.com",
-  "test_mode": "full",
-  "time_limit": 120,
-  "report_format": "html"
-}
+{"target": "http://test-demo.example.com", "test_mode": "full", "time_limit": 60, "report_format": "html"}

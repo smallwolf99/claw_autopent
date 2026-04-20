@@ -397,7 +397,7 @@ class OpenClawHandler:
             'start_time': config['start_time'].isoformat() if isinstance(config['start_time'], datetime) else str(config['start_time']),
             'end_time': datetime.now().isoformat(),
             'duration': f"{(datetime.now() - config['start_time']).total_seconds():.1f}秒" if isinstance(config['start_time'], datetime) else 'N/A',
-            'assets_count': assets_count,
+            'assets_count': len(assets),
             'risk_score': risk_report.get('overall_score', 0),
             'risk_level': risk_report.get('risk_level', 'Unknown'),
             'vulnerabilities_count': len(vulnerabilities),
