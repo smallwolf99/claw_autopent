@@ -1,0 +1,133 @@
+# 银行业务逻辑测试规则集
+# 匹配条件：business_hints.type == 'banking'
+# 执行动作：添加业务逻辑测试（转账逻辑、账户权限、数据隔离等）
+
+rules:
+  banking_business_logic:
+    id: "banking_business_logic"
+    name: "银行业务逻辑测试规则"
+    description: "针对银行系统核心业务逻辑的测试"
+    priority: 100
+    enabled: true
+    conditions:
+      - "business.type == 'banking'"
+    actions:
+      - action: "add_test"
+        category: "business_logic"
+        tests:
+          - "transfer_logic_flaws"
+          - "account_permission_test"
+          - "data_isolation_test"
+          - "balance_manipulation"
+          - "transaction_replay"
+          - "negative_balance_test"
+        tools:
+          - "burpsuite"
+          - "postman"
+          - "custom_scripts"
+        priority: "critical"
+        estimated_time: "90m"
+        test_data:
+          accounts: ["1001", "1002", "1003"]
+          amounts: ["0.01", "1.00", "100.00", "1000.00", "10000.00"]
+          currencies: ["USD", "CNY", "EUR", "JPY"]
+        commands:
+          - "python3 banking_tester.py -u {url} --test transfer_logic"
+          - "python3 authorization_tester.py -u {url} --test account_access"
+
+  privilege_escalation_banking:
+    id: "privilege_escalation_banking"
+    name: "银行系统权限提升测试"
+    description: "测试银行系统中的权限提升漏洞"
+    priority: 95
+    enabled: true
+    conditions:
+      - "business.type == 'banking'"
+    actions:
+      - action: "add_test"
+        category: "privilege_escalation"
+        tests:
+          - "user_to_admin_escalation"
+          - "view_other_accounts"
+          - "modify_other_transactions"
+          - "bypass_approval_workflows"
+        tools:
+          - "burpsuite"
+          - "sqlmap"
+        priority: "critical"
+        estimated_time: "60m"
+        commands:
+          - "sqlmap -u {url}/view_account --data 'account_id=*' --level 3"
+          - "python3 privilege_escalation.py -u {url} --role user --target admin"
+
+  data_isolation_test:
+    id: "data_isolation_test"
+    name: "数据隔离测试规则"
+    description: "验证用户数据是否被正确隔离"
+    priority: 90
+    enabled: true
+    conditions:
+      - "business.type == 'banking'"
+    actions:
+      - action: "add_test"
+        category: "data_isolation"
+        tests:
+          - "horizontal_privilege_escalation"
+          - "account_id_enumeration"
+          - "parameter_tampering_account_id"
+        tools:
+          - "burpsuite_intruder"
+          - "ffuf"
+        priority: "high"
+        estimated_time: "45m"
+        commands:
+          - "ffuf -u {url}/account/FUZZ -w numbers.txt -fs 0"
+          - "python3 data_isolation_tester.py -u {url} --account_ids 1001,1002,1003"
+
+  audit_log_tampering:
+    id: "audit_log_tampering"
+    name: "审计日志篡改测试"
+    description: "测试银行系统审计日志的完整性和防篡改性"
+    priority: 85
+    enabled: true
+    conditions:
+      - "business.type == 'banking'"
+    actions:
+      - action: "add_test"
+        category: "audit_log_security"
+        tests:
+          - "log_deletion_test"
+          - "log_modification_test"
+          - "timing_attack_on_logs"
+        tools:
+          - "burpsuite"
+          - "custom_scripts"
+        priority: "medium"
+        estimated_time: "30m"
+        commands:
+          - "python3 audit_log_tester.py -u {url} --test integrity"
+
+  transaction_integrity:
+    id: "transaction_integrity"
+    name: "交易完整性测试"
+    description: "确保银行交易不能在中途被篡改或重放"
+    priority: 100
+    enabled: true
+    conditions:
+      - "business.type == 'banking'"
+    actions:
+      - action: "add_test"
+        category: "transaction_security"
+        tests:
+          - "transaction_replay_attack"
+          - "amount_tampering"
+          - "beneficiary_tampering"
+          - "timestamp_manipulation"
+        tools:
+          - "mitmproxy"
+          - "burpsuite"
+        priority: "critical"
+        estimated_time: "75m"
+        commands:
+          - "python3 transaction_tester.py -u {url} --test replay_attack"
+          - "mitmproxy -s transaction_interceptor.py"

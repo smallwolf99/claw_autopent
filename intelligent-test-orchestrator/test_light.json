@@ -1,0 +1,6 @@
+{
+  "target": "http://example.com",
+  "test_mode": "light",
+  "time_limit": 30,
+  "report_format": "markdown"
+}

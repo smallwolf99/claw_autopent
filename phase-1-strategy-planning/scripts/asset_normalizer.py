@@ -1,0 +1,623 @@
+#!/usr/bin/env python3
+"""
+资产标准化模块 - 将各种安全工具的原始输出转换为统一资产对象
+
+支持格式:
+1. WhatWeb JSON输出 (--log-json)
+2. Nmap XML输出 (-oX)
+3. Subfinder JSON输出
+4. Httpx JSON输出 (待开发)
+5. Katana JSON输出 (待开发)
+
+核心概念:
+- Asset: 一个可独立测试的资产单元 (如: web应用、API端点、数据库服务)
+- Technology: 在资产中检测到的技术组件 (如: Apache Tomcat 7.0.70)
+- Endpoint: 资产中的具体端点路径和参数 (如: /login POST)
+"""
+
+import json
+import xml.etree.ElementTree as ET
+from pathlib import Path
+from typing import Dict, List, Optional, Any, Union
+from datetime import datetime
+import re
+from enum import Enum
+
+try:
+    from pydantic import BaseModel, Field, validator
+    PYDANTIC_AVAILABLE = True
+except ImportError:
+    PYDANTIC_AVAILABLE = False
+    # 简单替代方案
+    class BaseModel:
+        def dict(self):
+            return self.__dict__
+    
+    def Field(default=None, **kwargs):
+        return default
+
+class AssetCategory(str, Enum):
+    """资产分类枚举"""
+    WEB_APPLICATION = "web_application"
+    API_ENDPOINT = "api_endpoint"
+    DATABASE = "database"
+    INFRASTRUCTURE = "infrastructure"
+    SERVICE = "service"
+    UNKNOWN = "unknown"
+
+class TechnologyDetection(BaseModel):
+    """技术栈检测结果"""
+    name: str = Field(..., description="技术名称")
+    version: Optional[str] = Field(None, description="检测到的版本")
+    version_parsed: Optional[Dict[str, int]] = Field(None, description="解析后的版本号")
+    confidence: float = Field(1.0, description="检测置信度 (0.0-1.0)")
+    cvss_threshold: float = Field(7.0, description="关注的CVSS阈值")
+    cves: List[str] = Field(default_factory=list, description="相关CVE列表")
+    cpe: Optional[str] = Field(None, description="CPE标识符")
+    
+    @validator('version_parsed', pre=True, always=True)
+    def parse_version(cls, v, values):
+        """自动解析版本号字符串到字典格式"""
+        version_str = values.get('version')
+        if not version_str:
+            return None
+            
+        # 解析版本号: 如 "7.0.70" -> {"major":7,"minor":0,"patch":70}
+        version_patterns = [
+            r'(\d+)\.(\d+)\.(\d+)',  # x.y.z
+            r'(\d+)\.(\d+)',         # x.y
+            r'(\d+)'                 # x
+        ]
+        
+        for pattern in version_patterns:
+            match = re.match(pattern, str(version_str))
+            if match:
+                groups = [int(g) for g in match.groups()]
+                result = {"major": groups[0]}
+                if len(groups) > 1:
+                    result["minor"] = groups[1]
+                if len(groups) > 2:
+                    result["patch"] = groups[2]
+                return result
+        
+        return None
+    
+    @validator('confidence')
+    def validate_confidence(cls, v):
+        """验证置信度在合理范围内"""
+        return max(0.0, min(1.0, v))
+
+class EndpointInfo(BaseModel):
+    """端点信息"""
+    path: str = Field(..., description="端点路径")
+    methods: List[str] = Field(default_factory=list, description="支持的HTTP方法")
+    parameters: List[str] = Field(default_factory=list, description="参数列表")
+    auth_required: bool = Field(False, description="是否需要认证")
+    session_based: bool = Field(False, description="是否基于会话")
+    
+class BusinessHints(BaseModel):
+    """业务类型提示"""
+    type: str = Field("unknown", description="业务类型")
+    confidence: float = Field(0.0, description="类型识别置信度")
+    keywords: List[str] = Field(default_factory=list, description="关键词列表")
+    
+class StandardizedAsset(BaseModel):
+    """标准化资产对象 - 统一数据模型"""
+    # 基础信息
+    id: str = Field(..., description="资产唯一标识 (URL+类型的哈希)")
+    category: AssetCategory = Field(AssetCategory.UNKNOWN, description="资产分类")
+    url: Optional[str] = Field(None, description="资产URL")
+    ip: Optional[str] = Field(None, description="IP地址")
+    port: Optional[int] = Field(None, description="端口号")
+    
+    # 发现信息
+    discovery: Dict[str, Any] = Field(default_factory=dict, description="发现信息")
+    timestamp: datetime = Field(default_factory=datetime.now, description="发现时间")
+    
+    # 技术栈信息
+    technologies: List[TechnologyDetection] = Field(default_factory=list, description="检测到的技术栈")
+    
+    # 端点信息
+    endpoints: List[EndpointInfo] = Field(default_factory=list, description="端点列表")
+    
+    # 业务信息
+    business_hints: BusinessHints = Field(default_factory=BusinessHints, description="业务类型提示")
+    
+    # 元数据
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="扩展元数据")
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+    
+    @validator('id', pre=False, always=True)
+    def generate_id(cls, v, values):
+        """如果没有提供ID，基于URL+类型生成"""
+        if v:
+            return v
+            
+        url = values.get('url', '')
+        category = values.get('category', AssetCategory.UNKNOWN)
+        
+        if url and url != "unknown":
+            import hashlib
+            id_str = f"{url}:{category}"
+            return hashlib.md5(id_str.encode()).hexdigest()[:12]
+        
+        return "unknown_" + str(datetime.now().timestamp()).replace('.', '')[-8:]
+
+class AssetNormalizer:
+    """资产标准化器 - 主处理类"""
+    
+    def _strip_ansi_codes(self, text: str) -> str:
+        """去除ANSI颜色代码"""
+        import re
+        ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+        return ansi_escape.sub('', text)
+
+    def __init__(self):
+        self.assets: List[StandardizedAsset] = []
+        
+    def normalize_whatweb_json(self, json_data: Union[str, Dict]) -> StandardizedAsset:
+        """转换WhatWeb JSON输出为标准化资产"""
+        if isinstance(json_data, str):
+            try:
+                data = json.loads(json_data)
+            except json.JSONDecodeError:
+                # 可能是whatweb文本格式，尝试解析
+                return self.normalize_whatweb_text(json_data)
+        else:
+            data = json_data
+        
+        # 处理WhatWeb JSON格式
+        if 'target' in data:
+            # 标准WhatWeb JSON格式
+            target = data.get('target', {})
+            url = target.get('url', '')
+        elif 'url' in data:
+            # 简化格式
+            url = data.get('url', '')
+            data = {'target': {'url': url}, 'plugins': data.get('plugins', {})}
+        else:
+            raise ValueError("不支持的WhatWeb数据格式")
+        
+        # 创建资产对象
+        asset = StandardizedAsset(
+            url=url,
+            category=AssetCategory.WEB_APPLICATION,
+            discovery={
+                "tool": "whatweb",
+                "confidence": 0.9,
+                "raw_data": data
+            }
+        )
+        
+        # 提取技术栈信息
+        plugins = data.get('plugins', {})
+        
+        # Apache/Tomcat检测
+        if 'HTTPServer' in plugins:
+            server_info = plugins['HTTPServer']
+            server_string = server_info.get('string', '')
+            
+            if 'Tomcat' in server_string or 'Coyote' in server_string:
+                # 提取版本信息
+                version_match = re.search(r'(\d+\.\d+\.\d+)', server_string)
+                version = version_match.group(1) if version_match else None
+                
+                asset.technologies.append(TechnologyDetection(
+                    name="Apache Tomcat",
+                    version=version,
+                    confidence=0.95
+                ))
+        
+        # JQuery检测
+        if 'JQuery' in plugins:
+            jquery_info = plugins['JQuery']
+            version = jquery_info.get('version')
+            
+            asset.technologies.append(TechnologyDetection(
+                name="JQuery",
+                version=version,
+                confidence=0.9
+            ))
+        
+        # Bootstrap检测
+        if 'Bootstrap' in plugins:
+            asset.technologies.append(TechnologyDetection(
+                name="Bootstrap",
+                confidence=0.8
+            ))
+        
+        # HTML5检测
+        if 'HTML5' in plugins:
+            asset.technologies.append(TechnologyDetection(
+                name="HTML5",
+                confidence=0.9
+            ))
+        
+        # 业务类型识别
+        business_type = "unknown"
+        confidence = 0.0
+        keywords = []
+        
+        title = data.get('title', '')
+        if title:
+            title_lower = title.lower()
+            banking_keywords = ['bank', 'account', 'transfer', 'loan', 'credit']
+            
+            for keyword in banking_keywords:
+                if keyword in title_lower:
+                    business_type = "banking"
+                    confidence = max(confidence, 0.8)
+                    keywords.append(keyword)
+        
+        asset.business_hints = BusinessHints(
+            type=business_type,
+            confidence=confidence,
+            keywords=keywords
+        )
+        
+        return asset
+    
+    def normalize_whatweb_text(self, text_data: str) -> StandardizedAsset:
+        """解析WhatWeb文本输出为标准化资产"""
+        # 去除ANSI颜色代码
+        clean_text = self._strip_ansi_codes(text_data)
+        # 改进的URL正则表达式，处理ANSI清理后的文本
+        url_patterns = [
+            r'WhatWeb report for\s+(https?://[^\s]+)',
+            r'report for\s+(https?://[^\s]+)',
+            r'WhatWeb report for .*?\s+(http[^\s]+)',
+        ]
+        
+        url = "unknown"
+        for pattern in url_patterns:
+            match = re.search(pattern, clean_text)
+            if match:
+                url = match.group(1)
+                break
+        
+        # 提取技术栈信息
+        technologies = []
+        
+        # 检测Apache Tomcat
+        if 'Apache-Coyote' in clean_text:
+            version_match = re.search(r'Apache-Coyote/(\d+\.\d+(?:\.\d+)?)', clean_text)
+            version = version_match.group(1) if version_match else None
+            technologies.append(TechnologyDetection(
+                name="Apache Tomcat",
+                version=version,
+                confidence=0.9
+            ))
+        
+        # 检测JQuery
+        jquery_match = re.search(r'JQuery\[([^\]]+)\]', clean_text)
+        if jquery_match:
+            version = jquery_match.group(1).strip()
+            technologies.append(TechnologyDetection(
+                name="JQuery",
+                version=version,
+                confidence=0.8
+            ))
+        
+        # 检测Bootstrap
+        if 'Bootstrap' in clean_text:
+            technologies.append(TechnologyDetection(
+                name="Bootstrap",
+                confidence=0.7
+            ))
+        
+        # 检测HTML5
+        if 'HTML5' in clean_text:
+            technologies.append(TechnologyDetection(
+                name="HTML5",
+                confidence=0.8
+            ))
+        
+        # 业务类型识别
+        business_type = "unknown"
+        confidence = 0.0
+        keywords = []
+        
+        title_match = re.search(r'Title\s+:\s+([^\n]+)', clean_text)
+        if title_match:
+            title = title_match.group(1).strip()
+            title_lower = title.lower()
+            
+            banking_keywords = ['bank', 'account', 'transfer', 'loan', 'credit']
+            for keyword in banking_keywords:
+                if keyword in title_lower:
+                    business_type = "banking"
+                    confidence = max(confidence, 0.8)
+                    keywords.append(keyword)
+        
+        # 创建资产对象
+        asset = StandardizedAsset(
+            url=url,
+            category=AssetCategory.WEB_APPLICATION,
+            discovery={
+                "tool": "whatweb",
+                "confidence": 0.8,
+                "raw_format": "text"
+            },
+            technologies=technologies,
+            business_hints=BusinessHints(
+                type=business_type,
+                confidence=confidence,
+                keywords=keywords
+            )
+        )
+        
+        return asset
+    
+    def normalize_nmap_xml(self, xml_data: Union[str, Path]) -> List[StandardizedAsset]:
+        """转换Nmap XML输出为标准化资产列表"""
+        if isinstance(xml_data, (str, Path)):
+            tree = ET.parse(str(xml_data))
+            root = tree.getroot()
+        else:
+            root = xml_data
+        
+        assets = []
+        
+        # 遍历所有host
+        for host in root.findall('host'):
+            # 获取主机状态
+            status_elem = host.find('status')
+            if status_elem is None or status_elem.get('state') != 'up':
+                continue
+            
+            # 获取地址信息
+            address_elem = host.find('address')
+            if address_elem is None:
+                continue
+                
+            ip = address_elem.get('addr')
+            
+            # 获取主机名
+            hostnames_elem = host.find('hostnames')
+            hostnames = []
+            if hostnames_elem is not None:
+                for hostname in hostnames_elem.findall('hostname'):
+                    hostnames.append(hostname.get('name'))
+            
+            # 获取端口信息
+            ports_elem = host.find('ports')
+            if ports_elem is None:
+                continue
+            
+            # 为每个开放端口创建资产
+            for port_elem in ports_elem.findall('port'):
+                state_elem = port_elem.find('state')
+                if state_elem is None or state_elem.get('state') != 'open':
+                    continue
+                
+                port_id = port_elem.get('portid')
+                protocol = port_elem.get('protocol')
+                
+                # 获取服务信息
+                service_elem = port_elem.find('service')
+                service_name = service_elem.get('name') if service_elem is not None else 'unknown'
+                service_product = service_elem.get('product') if service_elem is not None else None
+                service_version = service_elem.get('version') if service_elem is not None else None
+                
+                # 创建URL
+                if service_name in ['http', 'https']:
+                    scheme = 'https' if service_name == 'https' else 'http'
+                    domain = hostnames[0] if hostnames else ip
+                    url = f"{scheme}://{domain}:{port_id}/"
+                else:
+                    url = None
+                
+                # 确定资产类别
+                if service_name in ['http', 'https']:
+                    category = AssetCategory.WEB_APPLICATION
+                elif service_name in ['ssh', 'ftp', 'telnet']:
+                    category = AssetCategory.SERVICE
+                elif service_name in ['mysql', 'postgresql', 'mongodb']:
+                    category = AssetCategory.DATABASE
+                else:
+                    category = AssetCategory.UNKNOWN
+                
+                # 创建资产
+                asset = StandardizedAsset(
+                    url=url,
+                    ip=ip,
+                    port=int(port_id),
+                    category=category,
+                    discovery={
+                        "tool": "nmap",
+                        "protocol": protocol,
+                        "service_name": service_name,
+                        "raw_service": service_product
+                    }
+                )
+                
+                # 添加技术栈信息
+                if service_product:
+                    # 尝试从服务产品中提取技术信息
+                    if 'Tomcat' in service_product or 'Coyote' in service_product:
+                        version_match = re.search(r'(\d+\.\d+\.\d+)', service_product)
+                        version = version_match.group(1) if version_match else None
+                        
+                        asset.technologies.append(TechnologyDetection(
+                            name="Apache Tomcat",
+                            version=version,
+                            confidence=0.9
+                        ))
+                
+                assets.append(asset)
+        
+        return assets
+    
+    def normalize_subfinder_json(self, json_data: Union[str, Dict]) -> List[StandardizedAsset]:
+        """转换Subfinder JSON输出为标准化资产列表"""
+        if isinstance(json_data, str):
+            data = json.loads(json_data)
+        else:
+            data = json_data
+        
+        assets = []
+        
+        # Subfinder通常返回域名列表
+        for domain_entry in data:
+            domain = domain_entry.get('host', '') if isinstance(domain_entry, dict) else str(domain_entry)
+            
+            if not domain:
+                continue
+            
+            # 创建基础HTTP/HTTPS资产
+            for scheme in ['http', 'https']:
+                asset = StandardizedAsset(
+                    url=f"{scheme}://{domain}/",
+                    category=AssetCategory.WEB_APPLICATION,
+                    discovery={
+                        "tool": "subfinder",
+                        "source": "passive_dns"
+                    }
+                )
+                
+                assets.append(asset)
+        
+        return assets
+    
+    def normalize_from_file(self, file_path: Path) -> List[StandardizedAsset]:
+        """从文件自动识别格式并标准化"""
+        file_path = Path(file_path)
+        
+        if not file_path.exists():
+            raise FileNotFoundError(f"文件不存在: {file_path}")
+        
+        # 根据扩展名识别格式
+        suffix = file_path.suffix.lower()
+        
+        if suffix == '.json':
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+            
+            # 尝试识别JSON格式
+            if isinstance(data, dict):
+                # WhatWeb格式检测
+                if 'target' in data and 'plugins' in data:
+                    return [self.normalize_whatweb_json(data)]
+                
+                # Subfinder格式检测
+                elif isinstance(data, list) or 'host' in data:
+                    return self.normalize_subfinder_json(data)
+            
+            elif isinstance(data, list):
+                # 可能是Subfinder格式
+                return self.normalize_subfinder_json(data)
+        
+        elif suffix in ['.xml', '.nmap']:
+            # Nmap XML格式
+            return self.normalize_nmap_xml(file_path)
+        
+        elif suffix == '.txt':
+            # 文本格式 - 尝试解析whatweb文本输出
+            content = file_path.read_text()
+            # 可以添加文本解析逻辑，但MVP阶段暂不支持
+            pass
+        
+        raise ValueError(f"不支持的文件格式: {suffix}")
+    
+    def add_asset(self, asset: StandardizedAsset):
+        """添加资产到集合"""
+        self.assets.append(asset)
+    
+    def get_assets(self) -> List[StandardizedAsset]:
+        """获取所有标准化资产"""
+        return self.assets
+    
+    def to_json(self, file_path: Optional[Path] = None) -> str:
+        """将资产列表导出为JSON"""
+        assets_data = [asset.dict() for asset in self.assets]
+        
+        if file_path:
+            with open(file_path, 'w') as f:
+                json.dump(assets_data, f, indent=2, default=str)
+        
+        return json.dumps(assets_data, indent=2, default=str)
+
+def main():
+    """命令行入口点"""
+    import argparse
+    import sys
+    
+    parser = argparse.ArgumentParser(description="资产标准化器 - 将安全工具输出转换为统一格式")
+    parser.add_argument("--whatweb", type=str, help="WhatWeb JSON文件路径")
+    parser.add_argument("--nmap", type=str, help="Nmap XML文件路径")
+    parser.add_argument("--subfinder", type=str, help="Subfinder JSON文件路径")
+    parser.add_argument("--output", type=str, help="输出JSON文件路径")
+    parser.add_argument("--format", choices=["json", "summary"], default="json", help="输出格式")
+    
+    args = parser.parse_args()
+    
+    if not any([args.whatweb, args.nmap, args.subfinder]):
+        parser.print_help()
+        sys.exit(1)
+    
+    normalizer = AssetNormalizer()
+    
+    # 处理WhatWeb输入
+    if args.whatweb:
+        print(f"📄 处理WhatWeb文件: {args.whatweb}")
+        try:
+            assets = normalizer.normalize_from_file(Path(args.whatweb))
+            for asset in assets:
+                normalizer.add_asset(asset)
+            print(f"   ✅ 成功提取 {len(assets)} 个资产")
+        except Exception as e:
+            print(f"   ❌ 处理失败: {e}")
+    
+    # 处理Nmap输入
+    if args.nmap:
+        print(f"📄 处理Nmap文件: {args.nmap}")
+        try:
+            assets = normalizer.normalize_from_file(Path(args.nmap))
+            for asset in assets:
+                normalizer.add_asset(asset)
+            print(f"   ✅ 成功提取 {len(assets)} 个资产")
+        except Exception as e:
+            print(f"   ❌ 处理失败: {e}")
+    
+    # 处理Subfinder输入
+    if args.subfinder:
+        print(f"📄 处理Subfinder文件: {args.subfinder}")
+        try:
+            assets = normalizer.normalize_from_file(Path(args.subfinder))
+            for asset in assets:
+                normalizer.add_asset(asset)
+            print(f"   ✅ 成功提取 {len(assets)} 个资产")
+        except Exception as e:
+            print(f"   ❌ 处理失败: {e}")
+    
+    # 输出结果
+    if args.format == "json":
+        output_json = normalizer.to_json()
+        
+        if args.output:
+            Path(args.output).write_text(output_json)
+            print(f"\n📁 结果已保存到: {args.output}")
+        else:
+            print("\n📋 标准化资产JSON:")
+            print(output_json)
+    
+    elif args.format == "summary":
+        print("\n📊 资产摘要:")
+        for i, asset in enumerate(normalizer.get_assets(), 1):
+            print(f"\n  {i}. {asset.category.value.upper()}: {asset.url or f'{asset.ip}:{asset.port}'}")
+            
+            if asset.technologies:
+                tech_names = [f"{t.name} {t.version or ''}".strip() for t in asset.technologies]
+                print(f"     技术栈: {', '.join(tech_names)}")
+            
+            if asset.business_hints.type != "unknown":
+                print(f"     业务类型: {asset.business_hints.type} (置信度: {asset.business_hints.confidence:.1f})")
+    
+    print(f"\n🎉 总计处理 {len(normalizer.get_assets())} 个资产")
+
+if __name__ == "__main__":
+    main()

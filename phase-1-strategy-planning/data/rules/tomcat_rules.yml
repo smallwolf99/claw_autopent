@@ -1,0 +1,83 @@
+# Tomcat CVE验证规则集
+# 匹配条件：technology.name == 'Apache Tomcat'
+# 版本范围：version.parsed.major <= 8 (Tomcat 1.1需要验证CVE)
+# 执行动作：添加CVE验证测试，使用nuclei/afrog等工具
+
+rules:
+  # Tomcat CVE验证规则
+  - id: "tomcat_cve_validation"
+    name: "Tomcat CVE验证规则"
+    description: "当检测到Apache Tomcat时，验证相关CVE"
+    priority: 100
+    enabled: true
+    conditions:
+      - "technology.name == 'Apache Tomcat'"
+      - "technology.version contains '1.'"  # Tomcat 1.x版本有CVE
+    actions:
+      - action: "add_test"
+        category: "cve_validation"
+        tests: 
+          - "tomcat_cve_scan"
+          - "tomcat_manager_exposed"
+          - "tomcat_session_persistence_rce"
+          - "tomcat_war_deployment"
+        tools: 
+          - "nuclei_tomcat"
+          - "afrog_tomcat"
+          - "metasploit_tomcat"
+        priority: "high"
+        estimated_time: "30m"
+        cves:
+          - "CVE-2020-9484"
+          - "CVE-2020-1938"
+          - "CVE-2017-12617"
+          - "CVE-2021-41079"
+          - "CVE-2021-43980"
+          - "CVE-2022-23181"
+          - "CVE-2022-29885"
+          - "CVE-2023-30448"
+        commands:
+          - "nuclei -u {url} -tags tomcat -severity critical,high"
+          - "afrog -S tomcat -t {url}"
+          - "python3 tomcat_scanner.py -u {url} --cves"
+
+  # Tomcat版本特定规则
+  - id: "tomcat_version_specific"
+    name: "Tomcat版本特定规则"
+    description: "根据Tomcat具体版本匹配CVE影响范围"
+    priority: 90
+    enabled: true
+    conditions:
+      - "technology.name == 'Apache Tomcat'"
+      - "technology.version != ''"
+    actions:
+      - action: "add_test"
+        category: "version_specific_cve"
+        params:
+          version_check: true
+          risk_assessment: "基于technology_db.json的version_risk_matrix"
+        commands:
+          - "python3 version_matcher.py --url {url} --tech '{technology.name}' --version '{technology.version}'"
+
+  # Tomcat默认端口检测规则
+  - id: "tomcat_default_ports"
+    name: "Tomcat默认端口检测"
+    description: "检测Tomcat默认管理端口和接口"
+    priority: 80
+    enabled: true
+    conditions:
+      - "technology.name == 'Apache Tomcat'"
+    actions:
+      - action: "add_test"
+        category: "port_scanning"
+        tests:
+          - "tomcat_manager_port_8080"
+          - "tomcat_ajp_port_8009"
+          - "tomcat_shutdown_port_8005"
+        tools:
+          - "nmap"
+          - "gobuster"
+        commands:
+          - "nmap -p 8080,8009,8005 {ip} --script tomcat*"
+          - "gobuster dir -u {url} -w /usr/share/wordlists/dirb/common.txt -x jsp,war"
+          - "python3 tomcat_manager_finder.py -u {url}"

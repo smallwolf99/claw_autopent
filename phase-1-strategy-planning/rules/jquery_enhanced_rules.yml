@@ -1,0 +1,167 @@
+# jQuery安全测试增强规则集
+# 扩展自原有jquery_rules.yml，增加更多具体漏洞测试和版本精确匹配
+
+rules:
+  # jQuery CVE-2019-11358 原型污染特定规则
+  - id: "jquery_cve_2019_11358"
+    name: "jQuery CVE-2019-11358验证规则"
+    description: "jQuery原型污染漏洞验证（CVE-2019-11358）"
+    priority: 100
+    enabled: true
+    conditions:
+      - "technology.name == 'JQuery'"
+      - "technology.version matches '^[0-2]\\.|^3\\.0\\.|^3\\.1\\.|^3\\.2\\.|^3\\.3\\.'"
+    actions:
+      - action: "add_test"
+        category: "prototype_pollution"
+        tests: 
+          - "jquery_prototype_pollution"
+        tools: 
+          - "nuclei"
+          - "custom_scripts"
+        priority: "high"
+        estimated_time: "20m"
+        cves:
+          - "CVE-2019-11358"
+        references:
+          - "https://nvd.nist.gov/vuln/detail/CVE-2019-11358"
+        commands:
+          - "nuclei -u {url} -id CVE-2019-11358"
+          - "python3 jquery_prototype_pollution.py -u {url}"
+
+  # jQuery CVE-2020-11022/11023 XSS特定规则
+  - id: "jquery_cve_2020_11022_11023"
+    name: "jQuery CVE-2020-11022/11023验证规则"
+    description: "jQuery跨站脚本漏洞验证（CVE-2020-11022, CVE-2020-11023）"
+    priority: 95
+    enabled: true
+    conditions:
+      - "technology.name == 'JQuery'"
+      - "technology.version matches '^[0-2]\\.|^3\\.0\\.|^3\\.1\\.|^3\\.2\\.|^3\\.3\\.|^3\\.4\\.'"
+    actions:
+      - action: "add_test"
+        category: "xss_validation"
+        tests: 
+          - "jquery_xss_vulnerability"
+        tools: 
+          - "nuclei"
+          - "burpsuite"
+        priority: "high"
+        estimated_time: "25m"
+        cves:
+          - "CVE-2020-11022"
+          - "CVE-2020-11023"
+        references:
+          - "https://nvd.nist.gov/vuln/detail/CVE-2020-11022"
+          - "https://nvd.nist.gov/vuln/detail/CVE-2020-11023"
+        commands:
+          - "nuclei -u {url} -id CVE-2020-11022"
+          - "python3 jquery_xss_tester.py -u {url}"
+
+  # jQuery插件安全测试规则
+  - id: "jquery_plugin_security"
+    name: "jQuery插件安全测试规则"
+    description: "jQuery常用插件安全测试"
+    priority: 85
+    enabled: true
+    conditions:
+      - "technology.name == 'JQuery'"
+    actions:
+      - action: "add_test"
+        category: "plugin_security"
+        tests:
+          - "jquery_ui_xss_test"
+          - "jquery_mobile_security"
+          - "dataTables_security"
+          - "validation_plugin_test"
+        tools:
+          - "burpsuite"
+          - "custom_scripts"
+        priority: "medium"
+        estimated_time: "30m"
+        common_plugins:
+          - "jQuery UI"
+          - "jQuery Mobile"
+          - "DataTables"
+          - "Validation Plugin"
+          - "jQuery Form"
+        commands:
+          - "python3 jquery_plugin_detector.py -u {url}"
+          - "python3 plugin_vulnerability_scanner.py -u {url} --plugin all"
+
+  # jQuery危险函数调用检测增强规则
+  - id: "jquery_sink_detection_enhanced"
+    name: "jQuery危险函数调用检测增强规则"
+    description: "检测jQuery中的危险函数调用和DOM操作"
+    priority: 80
+    enabled: true
+    conditions:
+      - "technology.name == 'JQuery'"
+    actions:
+      - action: "add_test"
+        category: "sink_detection"
+        tests:
+          - "html_method_use"
+          - "append_prepend_injection"
+          - "attr_prop_manipulation"
+          - "eval_function_usage"
+          - "ajax_dangerous_calls"
+        tools:
+          - "static_analysis"
+          - "dynamic_analysis"
+        priority: "medium"
+        estimated_time: "25m"
+        sink_functions:
+          - ".html()"
+          - ".append()"
+          - ".prepend()"
+          - ".attr()"
+          - ".prop()"
+          - ".eval()"
+          - ".ajax() with insecure options"
+        commands:
+          - "python3 jquery_sink_analyzer.py -u {url} --mode static"
+          - "python3 jquery_sink_analyzer.py -u {url} --mode dynamic"
+
+  # jQuery版本精确分析规则
+  - id: "jquery_version_precise_analysis"
+    name: "jQuery版本精确分析规则"
+    description: "根据jQuery精确版本进行安全分析"
+    priority: 75
+    enabled: true
+    conditions:
+      - "technology.name == 'JQuery'"
+      - "technology.version != ''"
+    actions:
+      - action: "add_test"
+        category: "version_analysis"
+        params:
+          version_check: true
+          risk_matrix: "基于technology_db.json的version_risk_matrix"
+        commands:
+          - "python3 jquery_version_checker.py --url {url} --version '{technology.version}' --db technology_db.json"
+
+  # jQuery现代版本安全测试
+  - id: "modern_jquery_security_enhanced"
+    name: "现代jQuery安全测试增强规则"
+    description: "针对jQuery 3.5+版本的现代安全特性测试"
+    priority: 70
+    enabled: true
+    conditions:
+      - "technology.name == 'JQuery'"
+      - "technology.version matches '^3\\.[5-9]|^4\\.|^5\\.'"
+    actions:
+      - action: "add_test"
+        category: "modern_jquery"
+        tests:
+          - "es6_promise_security"
+          - "module_system_security"
+          - "ajax_enhanced_security"
+          - "deferred_object_security"
+        tools:
+          - "burpsuite"
+          - "custom_scripts"
+        priority: "low"
+        estimated_time: "20m"
+        commands:
+          - "python3 modern_jquery_analyzer.py -u {url} --version '{technology.version}'"

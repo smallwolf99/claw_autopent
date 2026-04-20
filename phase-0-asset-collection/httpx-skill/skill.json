@@ -1,0 +1,21 @@
+{
+  "name": "httpx",
+  "description": "Web存活与信息采集技能，封装调用httpx命令批量发现和识别Web端点。",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "type": "cli",
+  "author": "安小易",
+  "dependencies": [
+    "httpx"
+  ],
+  "interface": {
+    "scan": {
+      "desc": "批量存活探测与Web信息采集（目标、参数可配）",
+      "params": {
+        "targets": "目标URL列表，单条字符串或文件路径（-u/-l自动识别）",
+        "opts": "httpx附加参数（如'-title -tech-detect -status-code'等，可选）"
+      },
+      "output": "字符串，httpx原生输出"
+    }
+  }
+}

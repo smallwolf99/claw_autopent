@@ -1,0 +1,122 @@
+{
+  "name": "nmap-scanner",
+  "version": "1.0.0",
+  "description": "Professional network security scanner with JSON output format support",
+  "author": "高级安全渗透测试专家",
+  "maintainer": "OpenClaw Security Team",
+  
+  "category": "penetration-testing",
+  "subcategory": "asset-discovery",
+  "phase": "phase-1-asset-collection",
+  
+  "tags": ["security", "network", "scanning", "nmap", "json", "pentest", "reconnaissance"],
+  
+  "platforms": ["linux", "macos", "windows-wsl"],
+  "architectures": ["x86_64", "arm64"],
+  
+  "dependencies": {
+    "required": ["nmap"],
+    "recommended": ["jq", "curl", "python3"],
+    "optional": ["xsltproc", "wkhtmltopdf"]
+  },
+  
+  "minimum_openclaw_version": "2026.3.0",
+  
+  "entry_points": {
+    "scan": "scripts/basic_network_scan.sh",
+    "scan-full": "scripts/full_port_scan.sh",
+    "scan-batch": "scripts/batch_target_scan.sh",
+    "extract": "scripts/extract_open_ports.sh",
+    "install": "scripts/install.sh"
+  },
+  
+  "config_schema": {
+    "scan": {
+      "type": "object",
+      "properties": {
+        "default_scan_type": {
+          "type": "string",
+          "enum": ["fast", "full", "web", "service"],
+          "default": "fast",
+          "description": "Default scan type"
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 7200,
+          "default": 1800,
+          "description": "Maximum scan timeout in seconds"
+        },
+        "scan_speed": {
+          "type": "string",
+          "enum": ["T0", "T1", "T2", "T3", "T4", "T5"],
+          "default": "T4",
+          "description": "Nmap timing template"
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "type": "array",
+          "items": {"type": "string", "enum": ["json", "html", "csv", "text"]},
+          "default": ["json", "text"],
+          "description": "Output formats to generate"
+        },
+        "directory": {
+          "type": "string",
+          "default": "./scan-results",
+          "description": "Default output directory"
+        }
+      }
+    }
+  },
+  
+  "environment_variables": {
+    "NMAP_SCAN_CONFIG": {
+      "description": "Path to custom configuration file",
+      "optional": true
+    },
+    "NMAP_OUTPUT_DIR": {
+      "description": "Override default output directory",
+      "optional": true
+    }
+  },
+  
+  "changelog": [
+    {
+      "version": "1.0.0",
+      "date": "2026-03-26",
+      "changes": [
+        "Initial release",
+        "Basic network scanning with JSON output",
+        "Full port scanning capability",
+        "Batch target processing",
+        "Data extraction tools",
+        "Cross-platform support"
+      ]
+    }
+  ],
+  
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openclaw-org/skills/nmap-scanner"
+  },
+  
+  "issues": "https://github.com/openclaw-org/skills/issues",
+  
+  "compatibility": {
+    "openclaw": ">=2026.3.0",
+    "nmap": ">=7.80",
+    "jq": ">=1.6"
+  },
+  
+  "security_notes": [
+    "This tool should only be used on systems you own or have explicit permission to scan",
+    "Always obtain proper authorization before conducting security scans",
+    "Respect network usage policies and rate limits",
+    "Store scan results securely and dispose of them properly"
+  ]
+}

@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+"""
+add_to_path.py - 跨平台永久 PATH 环境变量配置工具
+
+功能：
+  - 自动检测当前操作系统
+  - 将指定目录永久添加到用户 PATH 环境变量
+  - Windows: 使用 setx 写入注册表（当前用户级别）
+  - Linux/macOS: 追加到 ~/.bashrc / ~/.zshrc
+
+用法：
+  python add_to_path.py <目录路径> [--dry-run]
+
+示例：
+  python add_to_path.py "C:/Users/bin"
+  python add_to_path.py "~/bin" --dry-run
+"""
+
+import sys
+import os
+import re
+import subprocess
+import argparse
+from pathlib import Path
+
+
+def fix_encoding():
+    if sys.stdout.encoding and sys.stdout.encoding.lower() in ("gbk", "cp936", "gb2312"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+
+def normalize_path(path_str: str) -> str:
+    return str(Path(path_str).expanduser().resolve())
+
+
+def get_shell_configs() -> list[Path]:
+    home = Path.home()
+    candidates = [home / ".bashrc", home / ".zshrc", home / ".profile", home / ".bash_profile"]
+    return [p for p in candidates if p.exists()]
+
+
+def add_to_unix_path(dir_path: str, dry_run: bool = False) -> bool:
+    dir_abs = normalize_path(dir_path)
+
+    if not Path(dir_abs).exists():
+        print(f"[ERROR] Directory does not exist: {dir_abs}")
+        return False
+
+    bashrc = Path.home() / ".bashrc"
+    zshrc = Path.home() / ".zshrc"
+    target = zshrc if zshrc.exists() else bashrc
+
+    export_line = f'\n# Added by katana skill\nexport PATH="{dir_abs}:$PATH"\n'
+
+    if dry_run:
+        print(f"[DRY-RUN] Would append to {target}:")
+        print(f"  {export_line.strip()}")
+        return True
+
+    try:
+        with open(target, "a", encoding="utf-8") as f:
+            f.write(export_line)
+        print(f"[OK] Added {dir_abs} to PATH via {target}")
+        print(f"    Run 'source {target}' or restart terminal to apply.")
+        return True
+    except Exception as e:
+        print(f"[ERROR] Failed to write to {target}: {e}")
+        return False
+
+
+def add_to_windows_path(dir_path: str, dry_run: bool = False) -> bool:
+    dir_abs = normalize_path(dir_path)
+
+    if not Path(dir_abs).exists():
+        print(f"[ERROR] Directory does not exist: {dir_abs}")
+        return False
+
+    try:
+        result = subprocess.run(
+            ['powershell', '-NoProfile', '-Command',
+             "[Environment]::GetEnvironmentVariable('Path', 'User')"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace"
+        )
+        current_path = result.stdout.strip()
+    except Exception as e:
+        print(f"[WARN] Could not read current PATH: {e}")
+        current_path = ""
+
+    existing = [p.strip().rstrip('\\') for p in current_path.split(';') if p.strip()]
+    dir_abs_lower = dir_abs.lower()
+
+    if any(p.lower().rstrip('\\') == dir_abs_lower for p in existing):
+        print(f"[SKIP] {dir_abs} already in user PATH")
+        return True
+
+    new_path = ";".join(existing + [dir_abs])
+
+    if dry_run:
+        print(f"[DRY-RUN] Would set user PATH to:")
+        print(f"  {new_path}")
+        return True
+
+    try:
+        result = subprocess.run(
+            ['setx', 'PATH', new_path],
+            capture_output=True, text=True, encoding="utf-8", errors="replace"
+        )
+        if result.returncode == 0:
+            print(f"[OK] Added {dir_abs} to user PATH (permanent)")
+            print(f"    Restart terminal / VS Code to see changes.")
+            return True
+        else:
+            print(f"[ERROR] setx failed: {result.stderr}")
+            return False
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        return False
+
+
+def main():
+    fix_encoding()
+
+    parser = argparse.ArgumentParser(description="Add directory to system PATH permanently (cross-platform)")
+    parser.add_argument("dir", help="Directory path to add to PATH")
+    parser.add_argument("--dry-run", action="store_true", help="Show what would be done without making changes")
+    args = parser.parse_args()
+
+    print(f"[INFO] Target directory: {normalize_path(args.dir)}")
+
+    if sys.platform.startswith("win"):
+        success = add_to_windows_path(args.dir, args.dry_run)
+    else:
+        success = add_to_unix_path(args.dir, args.dry_run)
+
+    sys.exit(0 if success else 1)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,21 @@
+{
+  "name": "whatweb",
+  "description": "Web指纹检测技能。封装whatweb命令用于批量资产技术栈识别。",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "type": "cli",
+  "author": "安小易",
+  "dependencies": [
+    "whatweb"
+  ],
+  "interface": {
+    "scan": {
+      "desc": "批量或单URL指纹识别（目标、参数可配）",
+      "params": {
+        "targets": "目标URL字符串、批量文件或以逗号/分号/换行分割的URL",
+        "opts": "whatweb附加参数（如'-v -a 3'等，可选）"
+      },
+      "output": "字符串，whatweb原生输出"
+    }
+  }
+}

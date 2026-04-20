@@ -1,0 +1,10 @@
+{
+  "target": "192.168.1.100",
+  "test_mode": "custom",
+  "time_limit": 60,
+  "report_format": "json",
+  "custom_options": {
+    "skip_verification": true,
+    "concurrent_tools": 5
+  }
+}

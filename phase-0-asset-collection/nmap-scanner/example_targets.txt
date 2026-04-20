@@ -1,0 +1,16 @@
+# Nmap扫描示例目标文件
+# 每行一个目标，支持IP地址或域名
+# 以#开头的行是注释
+
+# 示例目标
+scanme.nmap.org
+# 192.168.1.1
+# example.com
+
+# 本地测试
+127.0.0.1
+localhost
+
+# 常用测试目标
+demo.testfire.net
+testphp.vulnweb.com

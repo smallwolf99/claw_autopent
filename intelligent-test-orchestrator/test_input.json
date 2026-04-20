@@ -1,0 +1,6 @@
+{
+  "target": "http://zero.webappsecurity.com",
+  "test_mode": "full",
+  "time_limit": 120,
+  "report_format": "html"
+}

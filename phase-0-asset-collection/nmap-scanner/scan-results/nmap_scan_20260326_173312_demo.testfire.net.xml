@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///usr/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.94SVN scan initiated Thu Mar 26 17:33:12 2026 as: nmap -T4 -sV -F -oX scan-results/nmap_scan_20260326_173312_demo.testfire.net.xml demo.testfire.net -->
+<nmaprun scanner="nmap" args="nmap -T4 -sV -F -oX scan-results/nmap_scan_20260326_173312_demo.testfire.net.xml demo.testfire.net" start="1774517592" startstr="Thu Mar 26 17:33:12 2026" version="7.94SVN" xmloutputversion="1.05">
+<scaninfo type="syn" protocol="tcp" numservices="100" services="7,9,13,21-23,25-26,37,53,79-81,88,106,110-111,113,119,135,139,143-144,179,199,389,427,443-445,465,513-515,543-544,548,554,587,631,646,873,990,993,995,1025-1029,1110,1433,1720,1723,1755,1900,2000-2001,2049,2121,2717,3000,3128,3306,3389,3986,4899,5000,5009,5051,5060,5101,5190,5357,5432,5631,5666,5800,5900,6000-6001,6646,7070,8000,8008-8009,8080-8081,8443,8888,9100,9999-10000,32768,49152-49157"/>
+<verbose level="0"/>
+<debugging level="0"/>
+<hosthint><status state="up" reason="unknown-response" reason_ttl="0"/>
+<address addr="65.61.137.117" addrtype="ipv4"/>
+<hostnames>
+<hostname name="demo.testfire.net" type="user"/>
+</hostnames>
+</hosthint>
+<host starttime="1774517593" endtime="1774517616"><status state="up" reason="echo-reply" reason_ttl="251"/>
+<address addr="65.61.137.117" addrtype="ipv4"/>
+<hostnames>
+<hostname name="demo.testfire.net" type="user"/>
+</hostnames>
+<ports><extraports state="filtered" count="96">
+<extrareasons reason="no-response" count="96" proto="tcp" ports="7,9,13,21-23,25-26,37,53,79,81,88,106,110-111,113,119,135,139,143-144,179,199,389,427,444-445,465,513-515,543-544,548,554,587,631,646,873,990,993,995,1025-1029,1110,1433,1720,1723,1755,1900,2000-2001,2049,2121,2717,3000,3128,3306,3389,3986,4899,5000,5009,5051,5060,5101,5190,5357,5432,5631,5666,5800,5900,6000-6001,6646,7070,8000,8008-8009,8081,8888,9100,9999-10000,32768,49152-49157"/>
+</extraports>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack" reason_ttl="251"/><service name="http" product="Apache Tomcat/Coyote JSP engine" version="1.1" method="probed" conf="10"><cpe>cpe:/a:apache:coyote_http_connector:1.1</cpe></service></port>
+<port protocol="tcp" portid="443"><state state="open" reason="syn-ack" reason_ttl="251"/><service name="https" tunnel="ssl" method="table" conf="3"/></port>
+<port protocol="tcp" portid="8080"><state state="open" reason="syn-ack" reason_ttl="251"/><service name="http" product="Apache Tomcat/Coyote JSP engine" version="1.1" method="probed" conf="10"><cpe>cpe:/a:apache:coyote_http_connector:1.1</cpe></service></port>
+<port protocol="tcp" portid="8443"><state state="closed" reason="reset" reason_ttl="251"/><service name="https-alt" method="table" conf="3"/></port>
+</ports>
+<times srtt="226257" rttvar="28927" to="341965"/>
+</host>
+<runstats><finished time="1774517616" timestr="Thu Mar 26 17:33:36 2026" summary="Nmap done at Thu Mar 26 17:33:36 2026; 1 IP address (1 host up) scanned in 23.75 seconds" elapsed="23.75" exit="success"/><hosts up="1" down="0" total="1"/>
+</runstats>
+</nmaprun>

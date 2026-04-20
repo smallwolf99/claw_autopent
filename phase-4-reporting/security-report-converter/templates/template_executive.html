@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title if title else "安全风险评估报告" }}</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.8;
+            color: #2c3e50;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 40px;
+        }
+        
+        .executive-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            padding: 50px;
+        }
+        
+        .executive-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 3px solid #3498db;
+        }
+        
+        .executive-title {
+            font-size: 36px;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .executive-subtitle {
+            font-size: 18px;
+            color: #7f8c8d;
+            margin-bottom: 25px;
+        }
+        
+        .executive-summary {
+            background-color: #f8f9fa;
+            border-left: 5px solid #3498db;
+            padding: 20px;
+            margin-bottom: 40px;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .executive-summary h3 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+        
+        .risk-matrix {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .risk-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            border-top: 4px solid;
+        }
+        
+        .risk-card.high {
+            border-color: #e74c3c;
+        }
+        
+        .risk-card.medium {
+            border-color: #f39c12;
+        }
+        
+        .risk-card.low {
+            border-color: #27ae60;
+        }
+        
+        .risk-card.info {
+            border-color: #3498db;
+        }
+        
+        .risk-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .risk-count {
+            font-size: 24px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .risk-desc {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.5;
+        }
+        
+        .business-impact {
+            background-color: #fff8e1;
+            border: 1px solid #ffd54f;
+            border-radius: 8px;
+            padding: 25px;
+            margin: 40px 0;
+        }
+        
+        .impact-title {
+            color: #f57c00;
+            font-size: 20px;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        
+        .recommendations {
+            background-color: #e8f5e8;
+            border: 1px solid #4caf50;
+            border-radius: 8px;
+            padding: 25px;
+            margin: 40px 0;
+        }
+        
+        .rec-title {
+            color: #388e3c;
+            font-size: 20px;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        
+        .rec-item {
+            margin-bottom: 10px;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .rec-item:before {
+            content: "•";
+            color: #4caf50;
+            font-size: 20px;
+            position: absolute;
+            left: 0;
+            top: -2px;
+        }
+        
+        .executive-footer {
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px;
+            }
+            
+            .executive-container {
+                padding: 30px;
+            }
+            
+            .risk-matrix {
+                grid-template-columns: 1fr;
+            }
+            
+            .executive-title {
+                font-size: 28px;
+            }
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+                background: white;
+            }
+            
+            .executive-container {
+                box-shadow: none;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="executive-container">
+        <div class="executive-header">
+            <h1 class="executive-title">{{ title if title else "安全风险评估报告" }}</h1>
+            <div class="executive-subtitle">
+                高管摘要版 | 生成时间: {{ generation_date }}
+            </div>
+        </div>
+        
+        <div class="executive-summary">
+            <h3>执行摘要</h3>
+            <p>本报告概述了对目标系统的安全评估结果，重点关注对业务运营的潜在影响和风险。</p>
+        </div>
+        
+        <!-- 风险矩阵将在此处由JavaScript动态生成 -->
+        <div id="risk-matrix-container"></div>
+        
+        <div class="business-impact">
+            <h3 class="impact-title">业务影响分析</h3>
+            <div id="business-impact-content">
+                <!-- 业务影响内容将由JavaScript生成 -->
+            </div>
+        </div>
+        
+        <div class="recommendations">
+            <h3 class="rec-title">关键建议</h3>
+            <div id="recommendations-content">
+                <!-- 建议内容将由JavaScript生成 -->
+            </div>
+        </div>
+        
+        <div class="executive-footer">
+            <p>© 2026 安全战略委员会 | 本报告为高管决策支持文件</p>
+            <p>报告版本: {{ template_name }} | 生成时间: {{ generation_date }}</p>
+            <p style="font-style: italic;">注: 详细技术报告请咨询安全技术团队</p>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 分析内容并生成风险矩阵
+            const content = document.querySelector('.content').innerHTML;
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+            
+            // 提取风险信息
+            const riskCounts = {
+                high: 0,
+                medium: 0,
+                low: 0,
+                info: 0
+            };
+            
+            // 统计风险等级
+            const text = tempDiv.textContent;
+            if (text.includes('高风险') || text.includes('🔴')) riskCounts.high++;
+            if (text.includes('中风险') || text.includes('🟡')) riskCounts.medium++;
+            if (text.includes('低风险') || text.includes('🟢')) riskCounts.low++;
+            if (text.includes('信息类') || text.includes('ℹ️')) riskCounts.info++;
+            
+            // 生成风险矩阵
+            const riskMatrix = document.getElementById('risk-matrix-container');
+            riskMatrix.innerHTML = `
+                <h3 style="color: #2c3e50; margin-bottom: 20px;">风险概况</h3>
+                <div class="risk-matrix">
+                    <div class="risk-card high">
+                        <div class="risk-title">
+                            <span class="risk-count" style="color: #e74c3c;">${riskCounts.high}</span>
+                            <span>高风险</span>
+                        </div>
+                        <div class="risk-desc">
+                            严重影响业务运营，可能导致数据泄露、服务中断
+                        </div>
+                    </div>
+                    
+                    <div class="risk-card medium">
+                        <div class="risk-title">
+                            <span class="risk-count" style="color: #f39c12;">${riskCounts.medium}</span>
+                            <span>中风险</span>
+                        </div>
+                        <div class="risk-desc">
+                            可能影响业务功能，建议在业务规划中考虑
+                        </div>
+                    </div>
+                    
+                    <div class="risk-card low">
+                        <div class="risk-title">
+                            <span class="risk-count" style="color: #27ae60;">${riskCounts.low}</span>
+                            <span>低风险</span>
+                        </div>
+                        <div class="risk-desc">
+                            影响有限，可在例行维护中修复
+                        </div>
+                    </div>
+                    
+                    <div class="risk-card info">
+                        <div class="risk-title">
+                            <span class="risk-count" style="color: #3498db;">${riskCounts.info}</span>
+                            <span>参考信息</span>
+                        </div>
+                        <div class="risk-desc">
+                            技术发现，无直接安全风险
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 生成业务影响分析
+            const impactContent = document.getElementById('business-impact-content');
+            if (riskCounts.high > 0) {
+                impactContent.innerHTML = `
+                    <p><strong>立即影响 (${riskCounts.high}个高危漏洞):</strong></p>
+                    <ul style="margin-left: 20px;">
+                        <li>系统面临数据泄露风险，可能导致合规性问题</li>
+                        <li>攻击者可绕过认证系统，获取未授权访问</li>
+                        <li>可能造成服务中断，影响业务连续性</li>
+                    </ul>
+                `;
+            } else {
+                impactContent.innerHTML = `
+                    <p><strong>当前未发现立即性业务风险</strong></p>
+                    <p>系统安全状态总体可控，建议继续监控中、低风险问题</p>
+                `;
+            }
+            
+            // 生成关键建议
+            const recContent = document.getElementById('recommendations-content');
+            let recommendations = [];
+            
+            if (riskCounts.high > 0) {
+                recommendations.push('<div class="rec-item">立即成立应急小组，在24小时内修复高危漏洞</div>');
+            }
+            
+            if (riskCounts.medium > 0) {
+                recommendations.push('<div class="rec-item">在下一开发周期（7天内）修复中风险问题</div>');
+            }
+            
+            recommendations.push('<div class="rec-item">建立持续安全监控机制，定期进行安全评估</div>');
+            recommendations.push('<div class="rec-item">加强开发团队安全培训，实施安全编码规范</div>');
+            recommendations.push('<div class="rec-item">考虑引入自动化安全测试工具到CI/CD流程</div>');
+            
+            recContent.innerHTML = recommendations.join('');
+            
+            // 移除原始内容（保留给PDF生成）
+            document.querySelector('.content').style.display = 'none';
+        });
+    </script>
+</body>
+</html>

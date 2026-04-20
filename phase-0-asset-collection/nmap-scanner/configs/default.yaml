@@ -1,0 +1,265 @@
+# Nmap Scanner Default Configuration
+# OpenClaw Skill Configuration File
+
+# ========================================
+# SCAN CONFIGURATION
+# ========================================
+scan:
+  # Default scan type
+  # Options: fast, full, web, service
+  default_type: "fast"
+  
+  # Nmap timing template (T0-T5)
+  # T0: Paranoid (slowest)
+  # T3: Normal (default)
+  # T4: Aggressive (recommended)
+  # T5: Insane (fastest)
+  timing_template: "T4"
+  
+  # Maximum scan timeout in seconds
+  timeout_seconds: 1800
+  
+  # Parallel scans for batch operations
+  max_parallel_scans: 5
+  
+  # Retry failed scans
+  max_retries: 2
+  
+  # Validate targets before scanning
+  validate_targets: true
+  
+  # Ping targets before scanning
+  ping_targets: true
+
+# ========================================
+# OUTPUT CONFIGURATION
+# ========================================
+output:
+  # Output formats to generate
+  # Options: json, xml, html, csv, text, greppable
+  formats:
+    - json
+    - text
+  
+  # Default output directory
+  directory: "./scan-results"
+  
+  # Organize output by date
+  organize_by_date: true
+  
+  # Generate HTML reports
+  generate_html: true
+  
+  # Generate summary files
+  generate_summary: true
+  
+  # Auto-open HTML report (browser)
+  auto_open_report: false
+
+# ========================================
+# SECURITY CONFIGURATION
+# ========================================
+security:
+  # Require root privileges for certain scans
+  require_root: false
+  
+  # Check for legal compliance warnings
+  legal_compliance_check: true
+  
+  # Display security warnings
+  show_warnings: true
+  
+  # Log all scan activities
+  activity_logging: true
+  
+  # Encrypt sensitive output files
+  encrypt_sensitive: false
+
+# ========================================
+# NETWORK CONFIGURATION
+# ========================================
+network:
+  # Maximum packet rate (packets/second)
+  max_rate: 100
+  
+  # Minimum packet rate (packets/second)
+  min_rate: 10
+  
+  # DNS resolution
+  dns_resolution: true
+  
+  # Reverse DNS lookup
+  reverse_dns: true
+  
+  # Treat all hosts as online (skip ping)
+  assume_hosts_up: false
+
+# ========================================
+# SERVICE DETECTION
+# ========================================
+service_detection:
+  # Enable service version detection
+  enabled: true
+  
+  # Version detection intensity (0-9)
+  intensity: 7
+  
+  # Enable OS detection
+  os_detection: true
+  
+  # Enable default script scanning
+  script_scanning: true
+  
+  # Custom NSE scripts to run
+  custom_scripts: []
+
+# ========================================
+# PERFORMANCE OPTIMIZATION
+# ========================================
+performance:
+  # Scan delay between probes (milliseconds)
+  scan_delay: 0
+  
+  # Maximum scan delay (milliseconds)
+  max_scan_delay: 1000
+  
+  # Host timeout (milliseconds)
+  host_timeout: 1200000
+  
+  # Max retransmissions
+  max_retransmissions: 10
+
+# ========================================
+# NOTIFICATION SETTINGS
+# ========================================
+notifications:
+  # Enable notifications
+  enabled: false
+  
+  # Notification methods
+  methods:
+    email: false
+    webhook: false
+    slack: false
+    discord: false
+  
+  # Notification triggers
+  triggers:
+    on_complete: true
+    on_error: true
+    on_warning: true
+
+# ========================================
+# ADVANCED SETTINGS
+# ========================================
+advanced:
+  # Custom Nmap arguments
+  custom_args: ""
+  
+  # Use fragmentation
+  fragmentation: false
+  
+  # Use decoy scanning
+  decoy_scanning: false
+  
+  # Use source port specification
+  source_port: 0
+  
+  # Use data length variation
+  data_length: 0
+  
+  # Use IP options
+  ip_options: false
+
+# ========================================
+# LOGGING CONFIGURATION
+# ========================================
+logging:
+  # Log level: debug, info, warn, error
+  level: "info"
+  
+  # Log file path
+  file: "./nmap-scanner.log"
+  
+  # Maximum log file size (MB)
+  max_size: 10
+  
+  # Log rotation count
+  rotation: 5
+  
+  # Log format: text, json
+  format: "text"
+
+# ========================================
+# COMPATIBILITY SETTINGS
+# ========================================
+compatibility:
+  # Platform-specific settings
+  linux:
+    # Use sudo for privileged operations
+    use_sudo: true
+    
+    # Nmap binary path
+    nmap_path: "/usr/bin/nmap"
+  
+  macos:
+    # Use sudo for privileged operations
+    use_sudo: true
+    
+    # Nmap binary path
+    nmap_path: "/usr/local/bin/nmap"
+    
+    # Homebrew prefix
+    brew_prefix: "/usr/local"
+  
+  windows_wsl:
+    # WSL specific settings
+    wsl_version: 2
+    
+    # Use Windows nmap
+    use_windows_nmap: false
+    
+    # Path to Windows executables
+    windows_path: "/mnt/c/Windows/System32"
+
+# ========================================
+# INTEGRATION SETTINGS
+# ========================================
+integration:
+  # OpenClaw integration
+  openclaw:
+    # Auto-load skill
+    autoload: true
+    
+    # Skill priority
+    priority: 50
+    
+    # Available contexts
+    contexts: ["penetration-testing", "asset-discovery", "security-audit"]
+  
+  # External tool integration
+  tools:
+    # Integration with Shodan
+    shodan: false
+    
+    # Integration with Censys
+    censys: false
+    
+    # Integration with VirusTotal
+    virustotal: false
+
+# ========================================
+# UPDATE SETTINGS
+# ========================================
+updates:
+  # Check for updates
+  check_updates: true
+  
+  # Auto-update skill
+  auto_update: false
+  
+  # Update channel: stable, beta, alpha
+  channel: "stable"
+  
+  # Update check frequency (hours)
+  frequency: 24

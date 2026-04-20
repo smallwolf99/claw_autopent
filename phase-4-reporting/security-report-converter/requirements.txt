@@ -1,0 +1,16 @@
+# 安全报告转换器依赖库
+
+# Markdown处理
+markdown==3.5.2
+PyYAML==6.0.1
+Jinja2==3.1.4
+
+# HTML转PDF
+weasyprint==61.0
+pydyf==0.10.0  # 固定版本避免API变更兼容性问题
+
+# 命令行参数解析
+argparse==1.4.0
+
+# 颜色输出（可选）
+colorama==0.4.6

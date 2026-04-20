@@ -1,0 +1,163 @@
+{
+  "name": "intelligent-test-orchestrator",
+  "version": "1.0.0",
+  "description": "智能安全测试编排器 - 全自动资产收集、漏洞检测、利用验证、报告生成",
+  "author": "安小易 008",
+  "category": "penetration-testing",
+  "subcategory": "orchestration",
+  "phase": "phase-1-strategy-planning",
+  
+  "interface": {
+    "type": "function",
+    "function": {
+      "name": "execute_intelligent_test",
+      "description": "执行智能安全测试全流程，包括资产收集、风险画像、漏洞检测、漏洞验证和报告生成",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string",
+            "description": "测试目标 (URL、IP 或域名)，例如：http://example.com 或 192.168.1.1"
+          },
+          "test_mode": {
+            "type": "string",
+            "enum": ["full", "light", "custom"],
+            "default": "full",
+            "description": "测试模式：full=完整流程（所有阶段），light=快速扫描（仅高危漏洞），custom=自定义"
+          },
+          "time_limit": {
+            "type": "integer",
+            "default": 120,
+            "description": "时间限制（分钟），超时后自动停止测试"
+          },
+          "report_format": {
+            "type": "string",
+            "enum": ["html", "markdown", "pdf", "json"],
+            "default": "html",
+            "description": "报告格式：html=网页报告，markdown=Markdown 文档，pdf=PDF 文档，json=原始数据"
+          },
+          "severity_filter": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["critical", "high", "medium", "low", "info"]
+            },
+            "default": ["critical", "high", "medium", "low", "info"],
+            "description": "漏洞严重程度过滤，默认包含所有级别"
+          },
+          "custom_options": {
+            "type": "object",
+            "description": "自定义选项，可覆盖默认配置",
+            "properties": {
+              "skip_asset_collection": {
+                "type": "boolean",
+                "description": "跳过资产收集（如果已有资产信息）"
+              },
+              "skip_verification": {
+                "type": "boolean",
+                "description": "跳过漏洞验证"
+              },
+              "concurrent_tools": {
+                "type": "integer",
+                "description": "并发执行的工具数量"
+              }
+            }
+          }
+        },
+        "required": ["target"]
+      }
+    }
+  },
+  
+  "triggers": [
+    "智能测试",
+    "自动化渗透",
+    "安全测试",
+    "漏洞扫描",
+    "渗透测试",
+    "一键测试",
+    "全面测试",
+    "security test",
+    "penetration test",
+    "vulnerability scan",
+    "automated test",
+    "帮我测试",
+    "扫描漏洞",
+    "评估风险"
+  ],
+  
+  "dependencies": [
+    "phase-0-asset-collection/whatweb-skill",
+    "phase-0-asset-collection/nmap-scanner",
+    "phase-0-asset-collection/httpx-skill",
+    "phase-0-asset-collection/subfinder",
+    "phase-0-asset-collection/katana",
+    "phase-2-vulnerability-scan/nuclei-scanner",
+    "phase-2-vulnerability-scan/afrog",
+    "phase-2-vulnerability-scan/nikto"
+  ],
+  
+  "permissions": [
+    "network_access",
+    "file_write",
+    "process_execution"
+  ],
+  
+  "output_format": {
+    "type": "json",
+    "schema": {
+      "success": "boolean",
+      "summary": "string",
+      "data": {
+        "target": "string",
+        "assets_found": "integer",
+        "vulnerabilities_found": "integer",
+        "verified_vulns": "integer",
+        "risk_score": "number",
+        "report_path": "string",
+        "report_url": "string",
+        "execution_time": "number",
+        "start_time": "string",
+        "end_time": "string"
+      }
+    }
+  },
+  
+  "examples": [
+    {
+      "description": "执行完整安全测试",
+      "input": {
+        "target": "http://zero.webappsecurity.com",
+        "test_mode": "full"
+      }
+    },
+    {
+      "description": "快速扫描高危漏洞",
+      "input": {
+        "target": "example.com",
+        "test_mode": "light",
+        "severity_filter": ["critical", "high"]
+      }
+    },
+    {
+      "description": "自定义测试并生成 PDF 报告",
+      "input": {
+        "target": "192.168.1.100",
+        "test_mode": "custom",
+        "report_format": "pdf",
+        "time_limit": 60
+      }
+    }
+  ],
+  
+  "metadata": {
+    "created_at": "2026-04-20",
+    "updated_at": "2026-04-20",
+    "license": "MIT",
+    "homepage": "https://github.com/advanced-pentester",
+    "support": {
+      "email": "support@example.com",
+      "issues": "https://github.com/advanced-pentester/issues"
+    }
+  }
+}

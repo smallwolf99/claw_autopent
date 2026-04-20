@@ -1,0 +1,42 @@
+# 安全报告转换器配置
+
+templates:
+  professional: template_professional.html
+  simple: template_simple.html
+  executive: template_executive.html
+
+styles:
+  professional: style_professional.css
+  simple: style_simple.css
+  executive: style_executive.css
+
+output:
+  html_extension: .html
+  pdf_extension: .pdf
+  default_template: professional
+
+metadata:
+  default_author: "安全渗透测试专家团队"
+  default_organization: "高级安全测试部门"
+  confidentiality: "内部使用 - 禁止外传"
+  version: "1.0.0"
+
+pdf:
+  page_size: A4
+  margin_top: "1cm"
+  margin_bottom: "1cm"
+  margin_left: "1cm"
+  margin_right: "1cm"
+  enable_forms: false
+  enable_javascript: true
+  
+html:
+  minify: false
+  embed_css: true
+  embed_images: true
+
+logging:
+  level: "INFO"
+  log_file: "conversion.log"
+  max_file_size: "10MB"
+  backup_count: 5
