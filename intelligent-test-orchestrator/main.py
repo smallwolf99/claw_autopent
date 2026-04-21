@@ -40,9 +40,9 @@ from core.test_strategist import TestStrategist
 from core.rule_engine import RuleEngine
 
 # 导入工具适配器（Task 28 完成）
-from adapters.phase0_adapter import Phase0Adapter
-from adapters.phase2_adapter import Phase2Adapter
-from adapters.phase3_validator import Phase3Validator
+from adapters.phase0_adapter_real import Phase0Adapter
+from adapters.phase2_adapter_real import Phase2Adapter
+from adapters.phase3_validator_real import Phase3Validator
 from adapters.phase4_reporter import Phase4Reporter
 
 
