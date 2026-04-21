@@ -296,11 +296,14 @@ class OpenClawHandler:
         """
         logger.info("Phase-1: 开始风险画像评估")
         
+        # 从配置中读取评分模式，默认为 'safety'（分数越低越安全）
+        score_mode = config.get('score_mode', 'safety')
+        
         # 使用迁移后的风险画像模块
-        profiler = RiskProfiler()
+        profiler = RiskProfiler(score_mode=score_mode)
         risk_report = profiler.assess(assets)
         
-        logger.info(f"Phase-1 完成：风险评分={risk_report.get('overall_score', 0)}/100")
+        logger.info(f"Phase-1 完成：安全评分={risk_report.get('overall_score', 0)}/100（模式：{score_mode}）")
         return risk_report
     
     async def _execute_phase_2(self, assets: List[Dict], config: Dict) -> List[Dict]:

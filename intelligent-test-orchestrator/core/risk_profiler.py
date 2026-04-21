@@ -34,6 +34,9 @@ class RiskScore:
     business_risk: float # 业务风险分 (0-100)
     config_risk: float   # 配置风险分 (0-100)
     
+    # 评分模式：'safety' = 分数越低越安全，'threat' = 分数越高越危险
+    score_mode: str = 'threat'
+    
     # 权重分配 (可配置)
     weights = {
         'tech': 0.4,       # 技术栈风险权重
@@ -42,13 +45,22 @@ class RiskScore:
         'config': 0.1      # 配置风险权重
     }
     
-    # 风险等级划分
-    risk_levels = {
+    # 风险等级划分 - 威胁模式（分数越高越危险）
+    threat_levels = {
         (0, 20): "🟢 安全",
         (20, 40): "🟡 低风险",
         (40, 60): "🟠 中风险",
         (60, 80): "🟣 高风险",
         (80, 100): "🔴 危急"
+    }
+    
+    # 风险等级划分 - 安全模式（分数越低越安全，反向显示）
+    safety_levels = {
+        (80, 100): "🟢 安全",
+        (60, 80): "🟡 低风险",
+        (40, 60): "🟠 中风险",
+        (20, 40): "🟣 高风险",
+        (0, 20): "🔴 危急"
     }
     
     def to_dict(self) -> Dict[str, Any]:
@@ -60,12 +72,14 @@ class RiskScore:
             "business_risk": round(self.business_risk, 2),
             "config_risk": round(self.config_risk, 2),
             "risk_level": self.get_risk_level(),
+            "score_mode": self.score_mode,
             "weights": self.weights
         }
     
     def get_risk_level(self) -> str:
         """获取风险等级描述"""
-        for (low, high), level in self.risk_levels.items():
+        levels = self.threat_levels if self.score_mode == 'threat' else self.safety_levels
+        for (low, high), level in levels.items():
             if low <= self.overall_score < high:
                 return level
         return "未知风险"
@@ -74,11 +88,13 @@ class RiskScore:
 class RiskProfiler:
     """风险画像引擎"""
     
-    def __init__(self, weights: Optional[Dict[str, float]] = None):
+    def __init__(self, weights: Optional[Dict[str, float]] = None, 
+                 score_mode: str = 'safety'):
         """初始化风险画像引擎
         
         Args:
             weights: 自定义权重分配，默认使用标准权重
+            score_mode: 评分模式 - 'safety' = 分数越低越安全（默认），'threat' = 分数越高越危险
         """
         self.weights = weights or {
             'tech': 0.4,       # 技术栈风险权重
@@ -86,6 +102,8 @@ class RiskProfiler:
             'business': 0.2,   # 业务风险权重
             'config': 0.1      # 配置风险权重
         }
+        
+        self.score_mode = score_mode
         
         # 业务类型风险系数
         self.business_type_risk_factors = {
@@ -102,7 +120,7 @@ class RiskProfiler:
             'unknown': 1.0         # 未知类型
         }
         
-        logger.info("风险画像引擎初始化完成")
+        logger.info(f"风险画像引擎初始化完成（评分模式：{score_mode}）")
     
     def assess(self, assets: List[Dict[str, Any]]) -> Dict[str, Any]:
         """评估资产列表的整体风险
@@ -188,7 +206,8 @@ class RiskProfiler:
             tech_risk=tech_risk,
             exposure_risk=exposure_risk,
             business_risk=business_risk,
-            config_risk=config_risk
+            config_risk=config_risk,
+            score_mode=self.score_mode
         )
     
     def _calculate_tech_risk(self, technologies: List[Dict[str, Any]]) -> float:
@@ -309,7 +328,13 @@ class RiskProfiler:
     
     def _get_risk_level_from_score(self, score: float) -> str:
         """从分数获取风险等级"""
-        for (low, high), level in RiskScore.risk_levels.items():
+        # 根据当前模式使用对应的等级表
+        if self.score_mode == 'threat':
+            levels = RiskScore.threat_levels
+        else:
+            levels = RiskScore.safety_levels
+        
+        for (low, high), level in levels.items():
             if low <= score < high:
                 return level
         return "未知风险"
