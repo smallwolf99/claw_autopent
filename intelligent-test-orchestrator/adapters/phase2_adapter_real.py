@@ -117,7 +117,9 @@ class Phase2Adapter:
             # -silent: 静默模式
             # -timeout: 超时时间（秒）
             # -rate-limit: 每秒请求数限制（避免请求过快）
-            cmd = f"nuclei -u {target} -jsonl -silent -timeout 30 -rate-limit 5"
+            # -retries: 重试次数
+            # -severity: 只扫描高危及严重漏洞（更快）
+            cmd = f"nuclei -u {target} -jsonl -silent -timeout 30 -rate-limit 10 -retries 2 -severity high,critical"
             logger.info(f"执行命令：{cmd}")
             
             process = await asyncio.create_subprocess_shell(
@@ -128,7 +130,7 @@ class Phase2Adapter:
             
             stdout, stderr = await asyncio.wait_for(
                 process.communicate(),
-                timeout=600  # 10 分钟超时
+                timeout=900  # 15 分钟超时（增加）
             )
             
             output = stdout.decode()
@@ -277,9 +279,10 @@ class Phase2Adapter:
         logger.info(f"调用 Nikto: {target}")
         
         try:
-            # 尝试使用 JSON 格式输出
-            # 注意：旧版本 Nikto 可能不支持 -Format json
-            cmd = f"nikto -h {target} -Format json -timeout 10"
+            # 使用文本格式（JSON 格式需要付费版本）
+            # -h: 目标主机
+            # -timeout: 超时时间（秒）
+            cmd = f"nikto -h {target} -timeout 30"
             logger.info(f"执行命令：{cmd}")
             
             process = await asyncio.create_subprocess_shell(
@@ -296,39 +299,20 @@ class Phase2Adapter:
             output = stdout.decode()
             error_output = stderr.decode()
             
-            # 如果返回码非 0，记录错误但不返回空
+            # 记录详细日志
             if process.returncode != 0:
                 logger.warning(f"Nikto 返回码非 0: {process.returncode}")
                 if error_output:
-                    logger.warning(f"Nikto 错误：{error_output[:200]}")
-                # 继续尝试解析输出（可能有部分结果）
+                    logger.warning(f"Nikto 错误：{error_output[:300]}")
             
-            # 解析 Nikto JSON 输出
+            # 解析 Nikto 文本输出
             vulnerabilities = []
             if output.strip():
-                try:
-                    data = json.loads(output)
-                    if isinstance(data, dict):
-                        vulns = data.get('vulnerabilities', [])
-                        if vulns:
-                            for vuln in vulns:
-                                normalized = self._normalize_nikto_vuln(vuln, target)
-                                if normalized:
-                                    vulnerabilities.append(normalized)
-                            logger.info(f"Nikto 发现 {len(vulnerabilities)} 个漏洞")
-                        else:
-                            logger.info("Nikto 未发现漏洞（JSON 中 vulnerabilities 为空）")
-                    else:
-                        logger.warning(f"Nikto 输出格式异常：{type(data)}")
-                except json.JSONDecodeError as e:
-                    logger.warning(f"解析 Nikto JSON 失败：{e}")
-                    logger.warning(f"输出内容：{output[:200]}")
-                    # 尝试文本解析（备用方案）
-                    vulnerabilities = self._parse_nikto_text(output, target)
+                vulnerabilities = self._parse_nikto_text(output, target)
+                logger.info(f"Nikto 发现 {len(vulnerabilities)} 个漏洞")
             else:
                 logger.info("Nikto 没有输出内容")
             
-            logger.info(f"Nikto 发现 {len(vulnerabilities)} 个漏洞")
             return vulnerabilities
             
         except asyncio.TimeoutError:
@@ -339,28 +323,54 @@ class Phase2Adapter:
             return []
     
     def _parse_nikto_text(self, output: str, target: str) -> List[Dict[str, Any]]:
-        """解析 Nikto 文本输出（备用方案）"""
+        """解析 Nikto 文本输出"""
         vulnerabilities = []
         
-        # 简单的文本解析逻辑
+        # Nikto 输出格式示例：
+        # + /: Contains about 3436 images.
+        # + /admin.php: PHP admin page found.
+        # + OSVDB-1234: /test.php: Vulnerable script found
+        
         lines = output.split('\n')
         for line in lines:
-            if '+' in line and any(keyword in line.lower() for keyword in ['vuln', 'error', 'warning', 'found']):
-                vulnerabilities.append({
-                    "type": "vulnerability",
-                    "target": target,
-                    "tool": "nikto",
-                    "name": "Nikto Detection",
-                    "severity": "medium",
-                    "description": line.strip(),
-                    "evidence": line.strip(),
-                    "references": [],
-                    "tags": [],
-                    "cwe_id": [],
-                    "cvss_score": '',
-                    "remediation": "检查相关配置",
-                    "confidence": 0.7
-                })
+            line = line.strip()
+            if not line or not line.startswith('+'):
+                continue
+            
+            # 提取漏洞信息
+            vuln = {
+                "type": "vulnerability",
+                "target": target,
+                "tool": "nikto",
+                "name": "Nikto Detection",
+                "severity": "medium",
+                "description": line[1:].strip(),  # 去掉开头的 +
+                "evidence": line,
+                "references": [],
+                "tags": [],
+                "cwe_id": [],
+                "cvss_score": '',
+                "remediation": "检查相关配置和安全设置",
+                "confidence": 0.7
+            }
+            
+            # 尝试提取 OSVDB 编号
+            if 'OSVDB-' in line:
+                import re
+                osvdb_match = re.search(r'OSVDB-(\d+)', line)
+                if osvdb_match:
+                    vuln['references'].append(f"https://osvdb.org/show/osvdb/{osvdb_match.group(1)}")
+            
+            # 根据关键词判断严重程度
+            line_lower = line.lower()
+            if any(word in line_lower for word in ['critical', 'dangerous', 'exploit']):
+                vuln['severity'] = 'high'
+                vuln['confidence'] = 0.85
+            elif any(word in line_lower for word in ['warning', 'caution']):
+                vuln['severity'] = 'medium'
+                vuln['confidence'] = 0.7
+            
+            vulnerabilities.append(vuln)
         
         return vulnerabilities
     
