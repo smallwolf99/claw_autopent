@@ -14,27 +14,29 @@ Phase-0 资产收集适配器 - 真实工具调用版本
 
 import asyncio
 import json
-import subprocess
-import logging
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+# 使用统一日志模块
+from utils.logger import setup_logger
+
+# 使用通用工具调用基类
+from adapters.base_tool_adapter import BaseToolAdapter
 
 
-class Phase0Adapter:
+class Phase0Adapter(BaseToolAdapter):
     """Phase-0 资产收集适配器"""
     
-    def __init__(self):
+    def __init__(self, max_concurrent: int = 3):
         """初始化 Phase-0 适配器"""
+        super().__init__(max_concurrent=max_concurrent)
         self.tools = {
             'whatweb': self._call_whatweb,
             'nmap': self._call_nmap,
             'httpx': self._call_httpx,
             'subfinder': self._call_subfinder,
         }
-        logger.info("Phase-0 资产收集适配器初始化完成（真实工具调用）")
+        self.logger.info("Phase-0 资产收集适配器初始化完成（真实工具调用）")
     
     async def collect(self, target: str, tools: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         """执行资产收集
@@ -46,57 +48,45 @@ class Phase0Adapter:
         Returns:
             资产列表
         """
-        logger.info(f"开始资产收集：{target}")
+        self.logger.info(f"开始资产收集：{target}")
         
         if tools is None:
             tools = list(self.tools.keys())
         
         assets = []
         
-        # 并发执行多个工具
+        # 并发执行多个工具（使用信号量限制）
         tasks = []
         for tool_name in tools:
             if tool_name in self.tools:
                 tasks.append(self.tools[tool_name](target))
         
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        # 使用基类的并发控制
+        results = await self.gather_with_concurrency(tasks, concurrency=3)
         
         # 整合结果
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                logger.error(f"工具执行失败 {tools[i]}: {result}")
+                self.logger.error(f"工具执行失败 {tools[i]}: {result}")
                 continue
             
             if result:
                 assets.extend(result)
         
-        logger.info(f"资产收集完成：发现 {len(assets)} 个资产")
+        self.logger.info(f"资产收集完成：发现 {len(assets)} 个资产")
         return assets
     
     async def _call_whatweb(self, target: str) -> List[Dict[str, Any]]:
         """调用 WhatWeb 进行 Web 技术识别"""
-        logger.info(f"调用 WhatWeb: {target}")
+        self.logger.info(f"调用 WhatWeb: {target}")
         
-        try:
-            # 真实调用 WhatWeb
-            cmd = f"whatweb --color=never --quiet {target}"
-            logger.info(f"执行命令：{cmd}")
-            
-            process = await asyncio.create_subprocess_shell(
-                cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            
-            stdout, stderr = await process.communicate()
-            
-            if process.returncode != 0:
-                logger.warning(f"WhatWeb 执行失败：{stderr.decode()}")
+        cmd = f"whatweb --color=never --quiet {target}"
+        
+        def parse_output(stdout: str, stderr: str) -> List[Dict[str, Any]]:
+            if not stdout.strip():
                 return []
             
-            # 解析 WhatWeb 输出
-            output = stdout.decode()
-            technologies = self._parse_whatweb_output(output, target)
+            technologies = self._parse_whatweb_output(stdout, target)
             
             return [{
                 "type": "web",
@@ -104,10 +94,12 @@ class Phase0Adapter:
                 "technologies": technologies,
                 "source": "whatweb"
             }]
-            
-        except Exception as e:
-            logger.error(f"WhatWeb 调用失败：{e}")
-            return []
+        
+        return await self.call_tool(
+            cmd=cmd,
+            timeout=60,
+            parse_func=parse_output
+        )
     
     def _parse_whatweb_output(self, output: str, target: str) -> List[Dict[str, Any]]:
         """解析 WhatWeb 输出"""
@@ -140,31 +132,15 @@ class Phase0Adapter:
     
     async def _call_nmap(self, target: str) -> List[Dict[str, Any]]:
         """调用 Nmap 进行端口扫描"""
-        logger.info(f"调用 Nmap: {target}")
+        self.logger.info(f"调用 Nmap: {target}")
         
-        try:
-            # 真实调用 Nmap（快速扫描模式）
-            # -sV: 版本检测
-            # -sC: 默认脚本
-            # -T4: 快速扫描
-            # --open: 只显示开放端口
-            cmd = f"nmap -sV -sC -T4 --open -oX - {target}"
-            logger.info(f"执行命令：{cmd}")
-            
-            process = await asyncio.create_subprocess_shell(
-                cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            
-            stdout, stderr = await process.communicate()
-            
-            if process.returncode != 0:
-                logger.warning(f"Nmap 执行失败：{stderr.decode()}")
+        cmd = f"nmap -sV -sC -T4 --open -oX - {target}"
+        
+        def parse_output(stdout: str, stderr: str) -> List[Dict[str, Any]]:
+            if not stdout.strip():
                 return []
             
-            # 解析 Nmap XML 输出
-            ports = self._parse_nmap_xml(stdout.decode())
+            ports = self._parse_nmap_xml(stdout)
             
             return [{
                 "type": "port",
@@ -172,10 +148,12 @@ class Phase0Adapter:
                 "ports": ports,
                 "source": "nmap"
             }]
-            
-        except Exception as e:
-            logger.error(f"Nmap 调用失败：{e}")
-            return []
+        
+        return await self.call_tool(
+            cmd=cmd,
+            timeout=300,
+            parse_func=parse_output
+        )
     
     def _parse_nmap_xml(self, xml_output: str) -> List[Dict[str, Any]]:
         """解析 Nmap XML 输出"""
@@ -216,29 +194,16 @@ class Phase0Adapter:
     
     async def _call_httpx(self, target: str) -> List[Dict[str, Any]]:
         """调用 Httpx 进行 Web 探测"""
-        logger.info(f"调用 Httpx: {target}")
+        self.logger.info(f"调用 Httpx: {target}")
         
-        try:
-            # 真实调用 Httpx
-            cmd = f"httpx -u {target} -json -silent"
-            logger.info(f"执行命令：{cmd}")
-            
-            process = await asyncio.create_subprocess_shell(
-                cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            
-            stdout, stderr = await process.communicate()
-            
-            if process.returncode != 0:
-                logger.warning(f"Httpx 执行失败：{stderr.decode()}")
+        cmd = f"echo {target} | httpx -json -silent"
+        
+        def parse_output(stdout: str, stderr: str) -> List[Dict[str, Any]]:
+            if not stdout.strip():
                 return []
             
-            # 解析 JSON 输出
-            output = stdout.decode().strip()
-            if output:
-                data = json.loads(output)
+            try:
+                data = json.loads(stdout.strip())
                 return [{
                     "type": "web",
                     "url": target,
@@ -247,50 +212,37 @@ class Phase0Adapter:
                     "tech": data.get('tech', []),
                     "source": "httpx"
                 }]
-            
-            return []
-            
-        except Exception as e:
-            logger.error(f"Httpx 调用失败：{e}")
-            return []
+            except json.JSONDecodeError:
+                return []
+        
+        return await self.call_tool(
+            cmd=cmd,
+            timeout=60,
+            parse_func=parse_output
+        )
     
     async def _call_subfinder(self, target: str) -> List[Dict[str, Any]]:
         """调用 Subfinder 进行子域名收集"""
-        logger.info(f"调用 Subfinder: {target}")
+        self.logger.info(f"调用 Subfinder: {target}")
         
-        try:
-            # 提取域名
-            domain = target.split('//')[-1].split('/')[0]
-            
-            # 真实调用 Subfinder
-            cmd = f"subfinder -d {domain} -json -silent"
-            logger.info(f"执行命令：{cmd}")
-            
-            process = await asyncio.create_subprocess_shell(
-                cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            
-            stdout, stderr = await process.communicate()
-            
-            if process.returncode != 0:
-                logger.warning(f"Subfinder 执行失败：{stderr.decode()}")
+        # 提取域名
+        domain = target.split('//')[-1].split('/')[0]
+        cmd = f"subfinder -d {domain} -json -silent"
+        
+        def parse_output(stdout: str, stderr: str) -> List[Dict[str, Any]]:
+            if not stdout.strip():
                 return []
             
-            # 解析 JSON 输出（每行一个 JSON 对象）
             subdomains = []
-            output = stdout.decode().strip()
-            if output:
-                for line in output.split('\n'):
-                    if line.strip():
-                        try:
-                            data = json.loads(line)
-                            subdomain = data.get('host', '')
-                            if subdomain and subdomain not in subdomains:
-                                subdomains.append(subdomain)
-                        except:
-                            continue
+            for line in stdout.strip().split('\n'):
+                if line.strip():
+                    try:
+                        data = json.loads(line)
+                        subdomain = data.get('host', '')
+                        if subdomain and subdomain not in subdomains:
+                            subdomains.append(subdomain)
+                    except json.JSONDecodeError:
+                        continue
             
             return [{
                 "type": "subdomain",
@@ -298,10 +250,12 @@ class Phase0Adapter:
                 "subdomains": subdomains,
                 "source": "subfinder"
             }]
-            
-        except Exception as e:
-            logger.error(f"Subfinder 调用失败：{e}")
-            return []
+        
+        return await self.call_tool(
+            cmd=cmd,
+            timeout=120,
+            parse_func=parse_output
+        )
     
     def normalize_assets(self, assets: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """标准化资产格式

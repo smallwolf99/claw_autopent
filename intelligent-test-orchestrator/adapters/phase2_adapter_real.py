@@ -15,21 +15,23 @@ Phase-2 漏洞检测适配器 - 真实工具调用版本
 
 import asyncio
 import json
-import subprocess
-import logging
 import re
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+# 使用统一日志模块
+from utils.logger import setup_logger
+
+# 使用通用工具调用基类
+from adapters.base_tool_adapter import BaseToolAdapter
 
 
-class Phase2Adapter:
+class Phase2Adapter(BaseToolAdapter):
     """Phase-2 漏洞检测适配器（真实工具调用）"""
     
-    def __init__(self):
+    def __init__(self, max_concurrent: int = 3):
         """初始化 Phase-2 适配器"""
+        super().__init__(max_concurrent=max_concurrent)
         self.tools = {
             'nuclei': self._call_nuclei,
             'afrog': self._call_afrog,
@@ -37,7 +39,7 @@ class Phase2Adapter:
             'zap': self._call_zap,
             'sqlmap': self._call_sqlmap,
         }
-        logger.info("Phase-2 漏洞检测适配器初始化完成（真实工具调用）")
+        self.logger.info("Phase-2 漏洞检测适配器初始化完成（真实工具调用）")
     
     async def detect(self, assets: List[Dict[str, Any]], 
                     test_strategy: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
@@ -50,7 +52,7 @@ class Phase2Adapter:
         Returns:
             漏洞列表
         """
-        logger.info(f"开始漏洞检测：{len(assets)} 个资产")
+        self.logger.info(f"开始漏洞检测：{len(assets)} 个资产")
         
         vulnerabilities = []
         
@@ -59,7 +61,7 @@ class Phase2Adapter:
             vulns = await self._scan_asset(asset, test_strategy)
             vulnerabilities.extend(vulns)
         
-        logger.info(f"漏洞检测完成：发现 {len(vulnerabilities)} 个漏洞")
+        self.logger.info(f"漏洞检测完成：发现 {len(vulnerabilities)} 个漏洞")
         return vulnerabilities
     
     async def _scan_asset(self, asset: Dict[str, Any], 
@@ -77,12 +79,13 @@ class Phase2Adapter:
             if tool_name in self.tools:
                 tasks.append(self.tools[tool_name](target, asset))
         
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        # 使用基类的并发控制
+        results = await self.gather_with_concurrency(tasks, concurrency=3)
         
         vulnerabilities = []
         for result in results:
             if isinstance(result, Exception):
-                logger.error(f"工具执行失败：{result}")
+                self.logger.error(f"工具执行失败：{result}")
                 continue
             if result:
                 vulnerabilities.extend(result)
@@ -108,72 +111,34 @@ class Phase2Adapter:
     
     async def _call_nuclei(self, target: str, asset: Dict[str, Any]) -> List[Dict[str, Any]]:
         """调用 Nuclei 进行模板化漏洞扫描"""
-        logger.info(f"调用 Nuclei: {target}")
+        self.logger.info(f"调用 Nuclei: {target}")
         
-        try:
-            # 真实调用 Nuclei
-            # -u: 目标 URL
-            # -jsonl: JSON Lines 输出（兼容新版 Nuclei）
-            # -silent: 静默模式
-            # -timeout: 超时时间（秒）
-            # -rate-limit: 每秒请求数限制（避免请求过快）
-            # -retries: 重试次数
-            # -severity: 只扫描高危及严重漏洞（更快）
-            cmd = f"nuclei -u {target} -jsonl -silent -timeout 30 -rate-limit 10 -retries 2 -severity high,critical"
-            logger.info(f"执行命令：{cmd}")
-            
-            process = await asyncio.create_subprocess_shell(
-                cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=900  # 15 分钟超时（增加）
-            )
-            
-            output = stdout.decode()
-            error_output = stderr.decode()
-            
-            # 记录详细日志
-            if process.returncode != 0:
-                logger.warning(f"Nuclei 返回码非 0: {process.returncode}")
-                if error_output:
-                    logger.warning(f"Nuclei 错误：{error_output[:500]}")
-                # 继续尝试解析输出（可能有部分结果）
-                # 返回码 2 通常表示参数错误或配置问题
-                if process.returncode == 2:
-                    logger.error(f"Nuclei 参数错误，请检查命令：{cmd}")
-            
-            # 解析 JSON 输出（每行一个 JSON 对象）
+        cmd = f"nuclei -u {target} -jsonl -silent -timeout 30 -rate-limit 10 -retries 2 -severity high,critical"
+        
+        def parse_output(stdout: str, stderr: str) -> List[Dict[str, Any]]:
             vulnerabilities = []
-            if output.strip():
-                for line in output.split('\n'):
+            if stdout.strip():
+                for line in stdout.split('\n'):
                     if line.strip():
                         try:
                             data = json.loads(line)
                             vuln = self._normalize_nuclei_vuln(data, target)
                             if vuln:
                                 vulnerabilities.append(vuln)
-                        except json.JSONDecodeError as e:
-                            logger.debug(f"解析 Nuclei JSON 行失败：{e}")
+                        except json.JSONDecodeError:
                             continue
-                
-                logger.info(f"Nuclei 发现 {len(vulnerabilities)} 个漏洞")
-            else:
-                logger.info("Nuclei 没有输出（可能没有漏洞或模板未加载）")
-                if error_output:
-                    logger.warning(f"Nuclei 错误输出：{error_output[:200]}")
+            
+            if not vulnerabilities and stderr:
+                self.logger.warning(f"Nuclei 错误：{stderr[:200]}")
             
             return vulnerabilities
-            
-        except asyncio.TimeoutError:
-            logger.warning(f"Nuclei 扫描超时：{target}")
-            return []
-        except Exception as e:
-            logger.error(f"Nuclei 调用失败：{e}")
-            return []
+        
+        return await self.call_tool_with_retry(
+            cmd=cmd,
+            timeout=900,
+            parse_func=parse_output,
+            max_retries=2
+        )
     
     def _normalize_nuclei_vuln(self, data: Dict[str, Any], target: str) -> Optional[Dict[str, Any]]:
         """标准化 Nuclei 漏洞格式"""
@@ -199,37 +164,15 @@ class Phase2Adapter:
     
     async def _call_afrog(self, target: str, asset: Dict[str, Any]) -> List[Dict[str, Any]]:
         """调用 Afrog 进行 PoC 验证扫描"""
-        logger.info(f"调用 Afrog: {target}")
+        self.logger.info(f"调用 Afrog: {target}")
         
-        try:
-            # 真实调用 Afrog
-            # -target: 目标
-            # -json: JSON 输出
-            # -silent: 静默模式
-            cmd = f"afrog -target {target} -json -silent"
-            logger.info(f"执行命令：{cmd}")
-            
-            process = await asyncio.create_subprocess_shell(
-                cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=300
-            )
-            
-            if process.returncode != 0:
-                logger.warning(f"Afrog 执行失败：{stderr.decode()}")
-                return []
-            
-            # 解析 JSON 输出
+        cmd = f"afrog -target {target} -json -silent"
+        
+        def parse_output(stdout: str, stderr: str) -> List[Dict[str, Any]]:
             vulnerabilities = []
-            output = stdout.decode().strip()
-            if output:
+            if stdout.strip():
                 try:
-                    data = json.loads(output)
+                    data = json.loads(stdout.strip())
                     if isinstance(data, list):
                         for item in data:
                             vuln = self._normalize_afrog_vuln(item, target)
@@ -240,17 +183,15 @@ class Phase2Adapter:
                         if vuln:
                             vulnerabilities.append(vuln)
                 except json.JSONDecodeError:
-                    logger.error(f"解析 Afrog JSON 失败")
+                    pass
             
-            logger.info(f"Afrog 发现 {len(vulnerabilities)} 个漏洞")
             return vulnerabilities
-            
-        except asyncio.TimeoutError:
-            logger.warning(f"Afrog 扫描超时：{target}")
-            return []
-        except Exception as e:
-            logger.error(f"Afrog 调用失败：{e}")
-            return []
+        
+        return await self.call_tool(
+            cmd=cmd,
+            timeout=300,
+            parse_func=parse_output
+        )
     
     def _normalize_afrog_vuln(self, data: Dict[str, Any], target: str) -> Optional[Dict[str, Any]]:
         """标准化 Afrog 漏洞格式"""
@@ -276,51 +217,57 @@ class Phase2Adapter:
     
     async def _call_nikto(self, target: str, asset: Dict[str, Any]) -> List[Dict[str, Any]]:
         """调用 Nikto 进行 Web 漏洞扫描"""
-        logger.info(f"调用 Nikto: {target}")
+        self.logger.info(f"调用 Nikto: {target}")
         
-        try:
-            # 使用文本格式（JSON 格式需要付费版本）
-            # -h: 目标主机
-            # -timeout: 超时时间（秒）
-            cmd = f"nikto -h {target} -timeout 30"
-            logger.info(f"执行命令：{cmd}")
+        cmd = f"nikto -h {target} -timeout 30"
+        
+        def parse_output(stdout: str, stderr: str) -> List[Dict[str, Any]]:
+            if not stdout.strip():
+                return []
             
-            process = await asyncio.create_subprocess_shell(
-                cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=600  # 10 分钟超时
-            )
-            
-            output = stdout.decode()
-            error_output = stderr.decode()
-            
-            # 记录详细日志
-            if process.returncode != 0:
-                logger.warning(f"Nikto 返回码非 0: {process.returncode}")
-                if error_output:
-                    logger.warning(f"Nikto 错误：{error_output[:300]}")
-            
-            # 解析 Nikto 文本输出
             vulnerabilities = []
-            if output.strip():
-                vulnerabilities = self._parse_nikto_text(output, target)
-                logger.info(f"Nikto 发现 {len(vulnerabilities)} 个漏洞")
-            else:
-                logger.info("Nikto 没有输出内容")
+            lines = stdout.split('\n')
+            for line in lines:
+                line = line.strip()
+                if not line or not line.startswith('+'):
+                    continue
+                
+                vuln = {
+                    "type": "vulnerability",
+                    "target": target,
+                    "tool": "nikto",
+                    "name": "Nikto Detection",
+                    "severity": "medium",
+                    "description": line[1:].strip(),
+                    "evidence": line,
+                    "references": [],
+                    "tags": [],
+                    "cwe_id": [],
+                    "cvss_score": '',
+                    "remediation": "检查相关配置和安全设置",
+                    "confidence": 0.7
+                }
+                
+                if 'OSVDB-' in line:
+                    import re
+                    osvdb_match = re.search(r'OSVDB-(\d+)', line)
+                    if osvdb_match:
+                        vuln['references'].append(f"https://osvdb.org/show/osvdb/{osvdb_match.group(1)}")
+                
+                line_lower = line.lower()
+                if any(word in line_lower for word in ['critical', 'dangerous', 'exploit']):
+                    vuln['severity'] = 'high'
+                    vuln['confidence'] = 0.85
+                
+                vulnerabilities.append(vuln)
             
             return vulnerabilities
-            
-        except asyncio.TimeoutError:
-            logger.warning(f"Nikto 扫描超时：{target}")
-            return []
-        except Exception as e:
-            logger.error(f"Nikto 调用失败：{e}")
-            return []
+        
+        return await self.call_tool(
+            cmd=cmd,
+            timeout=600,
+            parse_func=parse_output
+        )
     
     def _parse_nikto_text(self, output: str, target: str) -> List[Dict[str, Any]]:
         """解析 Nikto 文本输出"""
@@ -406,32 +353,12 @@ class Phase2Adapter:
     
     async def _call_zap(self, target: str, asset: Dict[str, Any]) -> List[Dict[str, Any]]:
         """调用 ZAP-CLI 进行 Web 应用扫描"""
-        logger.info(f"调用 ZAP-CLI: {target}")
+        self.logger.info(f"调用 ZAP-CLI: {target}")
         
-        try:
-            # 真实调用 ZAP-CLI
-            # -p: ZAP 代理端口（服务器使用 8080）
-            # 快速扫描模式
-            cmd = f"zap-cli -p 8080 quick-scan -s all -f json -o /tmp/zap_report_{hash(target)}.json {target}"
-            logger.info(f"执行命令：{cmd}")
-            
-            process = await asyncio.create_subprocess_shell(
-                cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=900  # 15 分钟超时
-            )
-            
-            if process.returncode != 0:
-                logger.warning(f"ZAP-CLI 执行失败：{stderr.decode()}")
-                return []
-            
-            # 读取 JSON 报告
-            report_file = f"/tmp/zap_report_{hash(target)}.json"
+        report_file = f"/tmp/zap_report_{hash(target)}.json"
+        cmd = f"zap-cli -p 8080 quick-scan -s all -f json -o {report_file} {target}"
+        
+        def parse_output(stdout: str, stderr: str) -> List[Dict[str, Any]]:
             vulnerabilities = []
             try:
                 with open(report_file, 'r') as f:
@@ -448,17 +375,15 @@ class Phase2Adapter:
                     os.remove(report_file)
                     
             except (FileNotFoundError, json.JSONDecodeError) as e:
-                logger.error(f"读取 ZAP 报告失败：{e}")
+                self.logger.error(f"读取 ZAP 报告失败：{e}")
             
-            logger.info(f"ZAP-CLI 发现 {len(vulnerabilities)} 个漏洞")
             return vulnerabilities
-            
-        except asyncio.TimeoutError:
-            logger.warning(f"ZAP-CLI 扫描超时：{target}")
-            return []
-        except Exception as e:
-            logger.error(f"ZAP-CLI 调用失败：{e}")
-            return []
+        
+        return await self.call_tool(
+            cmd=cmd,
+            timeout=900,
+            parse_func=parse_output
+        )
     
     def _normalize_zap_vuln(self, data: Dict[str, Any], target: str) -> Optional[Dict[str, Any]]:
         """标准化 ZAP 漏洞格式"""
@@ -493,35 +418,14 @@ class Phase2Adapter:
     
     async def _call_sqlmap(self, target: str, asset: Dict[str, Any]) -> List[Dict[str, Any]]:
         """调用 SQLMap 进行 SQL 注入检测"""
-        logger.info(f"调用 SQLMap: {target}")
+        self.logger.info(f"调用 SQLMap: {target}")
         
-        try:
-            # 真实调用 SQLMap
-            # --batch: 非交互模式
-            # --level=1: 测试级别
-            # --risk=1: 风险级别
-            # --output-dir: 输出目录
-            cmd = f"sqlmap --batch --level=1 --risk=1 --output-dir=/tmp/sqlmap_{hash(target)} -u \"{target}\""
-            logger.info(f"执行命令：{cmd}")
-            
-            process = await asyncio.create_subprocess_shell(
-                cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=600  # 10 分钟超时
-            )
-            
-            if process.returncode != 0:
-                logger.warning(f"SQLMap 执行失败：{stderr.decode()}")
-                return []
-            
-            # 解析 SQLMap 输出
+        cmd = f"sqlmap --batch --level=1 --risk=1 --output-dir=/tmp/sqlmap_{hash(target)} -u \"{target}\""
+        
+        def parse_output(stdout: str, stderr: str) -> List[Dict[str, Any]]:
             vulnerabilities = []
-            output = stdout.decode()
+            if not stdout.strip():
+                return vulnerabilities
             
             # 检测 SQL 注入的关键字
             sql_injection_keywords = [
@@ -534,7 +438,7 @@ class Phase2Adapter:
             
             # 简单判断是否发现漏洞
             for keyword in sql_injection_keywords:
-                if keyword.lower() in output.lower():
+                if keyword.lower() in stdout.lower():
                     vulnerabilities.append({
                         "type": "vulnerability",
                         "target": target,
@@ -549,16 +453,15 @@ class Phase2Adapter:
                         "cvss_score": '',
                         "remediation": "使用参数化查询，避免 SQL 拼接",
                         "confidence": 0.9,
-                        "details": output[:1000]  # 截取部分输出作为详情
+                        "details": stdout[:1000]
                     })
                     break
             
-            logger.info(f"SQLMap 发现 {len(vulnerabilities)} 个 SQL 注入漏洞")
             return vulnerabilities
-            
-        except asyncio.TimeoutError:
-            logger.warning(f"SQLMap 扫描超时：{target}")
-            return []
-        except Exception as e:
-            logger.error(f"SQLMap 调用失败：{e}")
-            return []
+        
+        return await self.call_tool_with_retry(
+            cmd=cmd,
+            timeout=600,
+            parse_func=parse_output,
+            max_retries=1
+        )
