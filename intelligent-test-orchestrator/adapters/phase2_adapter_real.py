@@ -355,27 +355,40 @@ class Phase2Adapter(BaseToolAdapter):
         """调用 ZAP-CLI 进行 Web 应用扫描"""
         self.logger.info(f"调用 ZAP-CLI: {target}")
         
-        report_file = f"/tmp/zap_report_{hash(target)}.json"
+        # 检查 ZAP 是否运行
+        zap_running = await self._check_zap_status()
+        if not zap_running:
+            self.logger.warning("ZAP 服务未运行，跳过 ZAP 扫描")
+            return []
+        
+        report_file = f"/tmp/zap_report_{abs(hash(target))}.json"
         cmd = f"zap-cli -p 8080 quick-scan -s all -f json -o {report_file} {target}"
         
         def parse_output(stdout: str, stderr: str) -> List[Dict[str, Any]]:
             vulnerabilities = []
             try:
-                with open(report_file, 'r') as f:
-                    data = json.load(f)
-                    alerts = data.get('site', [{}])[0].get('alerts', [])
-                    for alert in alerts:
-                        normalized = self._normalize_zap_vuln(alert, target)
-                        if normalized:
-                            vulnerabilities.append(normalized)
-                
-                # 清理临时文件
                 import os
                 if os.path.exists(report_file):
-                    os.remove(report_file)
+                    with open(report_file, 'r') as f:
+                        data = json.load(f)
+                        sites = data.get('site', [])
+                        if sites:
+                            alerts = sites[0].get('alerts', [])
+                            for alert in alerts:
+                                normalized = self._normalize_zap_vuln(alert, target)
+                                if normalized:
+                                    vulnerabilities.append(normalized)
                     
-            except (FileNotFoundError, json.JSONDecodeError) as e:
+                    # 清理临时文件
+                    if os.path.exists(report_file):
+                        os.remove(report_file)
+                else:
+                    self.logger.warning(f"ZAP 报告文件不存在：{report_file}")
+                    
+            except (FileNotFoundError, json.JSONDecodeError, KeyError, IndexError) as e:
                 self.logger.error(f"读取 ZAP 报告失败：{e}")
+                self.logger.debug(f"stdout: {stdout}")
+                self.logger.debug(f"stderr: {stderr}")
             
             return vulnerabilities
         
@@ -384,6 +397,21 @@ class Phase2Adapter(BaseToolAdapter):
             timeout=900,
             parse_func=parse_output
         )
+    
+    async def _check_zap_status(self) -> bool:
+        """检查 ZAP 服务是否运行"""
+        try:
+            cmd = "zap-cli status"
+            result = await asyncio.create_subprocess_exec(
+                *cmd.split(),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await asyncio.wait_for(result.communicate(), timeout=10)
+            return result.returncode == 0
+        except Exception as e:
+            self.logger.debug(f"检查 ZAP 状态失败：{e}")
+            return False
     
     def _normalize_zap_vuln(self, data: Dict[str, Any], target: str) -> Optional[Dict[str, Any]]:
         """标准化 ZAP 漏洞格式"""
