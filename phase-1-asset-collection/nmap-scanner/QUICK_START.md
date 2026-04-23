@@ -1,93 +1,121 @@
-# Nmap技能包快速使用指南
+# nmap Skill 快速指南
 
-## 🚀 快速开始
+## 安装依赖
 
-### 1. 基础扫描
 ```bash
-# 快速扫描单个目标
-./basic_network_scan.sh target.com
+# Ubuntu/Debian
+sudo apt-get install nmap
 
-# 完整端口扫描
-./full_port_scan.sh 192.168.1.1
+# CentOS/RHEL
+sudo yum install nmap
+
+# macOS
+brew install nmap
+
+# Windows
+# 下载安装包：https://nmap.org/download.html
 ```
 
-### 2. 批量扫描
-```bash
-# 批量快速扫描
-./batch_target_scan.sh targets.txt fast
+## 基本使用
 
-# 批量Web服务扫描
-./batch_target_scan.sh websites.txt web
+### 快速扫描
+```bash
+python main.py -t scanme.nmap.org
 ```
 
-### 3. 数据提取
+### 完整端口扫描
 ```bash
-# 提取开放端口
-./extract_open_ports.sh scan.json list
-
-# 生成CSV报告
-./extract_open_ports.sh scan.json csv > report.csv
+python main.py -t scanme.nmap.org --scan-type full
 ```
 
-## 📁 文件说明
-
-| 文件 | 说明 |
-|------|------|
-| `basic_network_scan.sh` | 基础网络扫描脚本 |
-| `full_port_scan.sh` | 完整端口扫描脚本 |
-| `batch_target_scan.sh` | 批量目标扫描脚本 |
-| `extract_open_ports.sh` | 数据提取工具 |
-| `nmap_config.conf` | 配置文件 |
-| `example_targets.txt` | 示例目标文件 |
-| `SKILL.md` | 完整技能文档 |
-
-## ⚙️ 常用命令
-
-### 扫描命令
+### Web 服务扫描
 ```bash
-# 快速扫描最常用的1000个端口
-nmap -T4 -F -oJ result.json target.com
-
-# 完整端口扫描
-nmap -p- -T4 -sS -sV -oJ full_scan.json target.com
-
-# Web服务扫描
-nmap -p 80,443,8080,8443 -sV -oJ web_scan.json target.com
+python main.py -t example.com --scan-type web
 ```
 
-### 数据提取命令
+### 指定端口
 ```bash
-# 使用jq提取开放端口
-jq -r '.nmaprun.host.ports.port[] | select(.state.state == "open") | "\(.protocol)/\(.portid)"' scan.json
-
-# 统计开放端口数量
-jq -r '.nmaprun.host.ports.port[] | select(.state.state == "open") | .portid' scan.json | wc -l
+python main.py -t example.com --ports "80,443,8080"
 ```
 
-## 🔧 故障排除
+### 操作系统检测
+```bash
+python main.py -t scanme.nmap.org --os-detection
+```
 
-### 常见问题
-1. **权限不足**: 使用 `sudo` 运行脚本
-2. **nmap未安装**: 运行 `./install.sh` 安装依赖
-3. **扫描超时**: 调整配置文件中的超时时间
-4. **内存不足**: 减少并行扫描数量
+### NSE 脚本扫描
+```bash
+python main.py -t example.com --script "vuln"
+```
 
-### 错误代码
-- `1`: 一般错误
-- `2`: 无效参数
-- `3`: 网络错误
-- `4`: 权限不足
-- `124`: 超时
+### 批量扫描
+```bash
+python main.py -l targets.txt --timeout 3600
+```
 
-## 📞 支持
+### 限速扫描
+```bash
+python main.py -t example.com --rate-limit 100
+```
 
-如有问题，请参考:
-1. 完整文档: `SKILL.md`
-2. 配置文件: `nmap_config.conf`
-3. 示例文件: `example_targets.txt`
+## 参数说明
 
-## 📝 更新日志
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `-t, --target` | 单个扫描目标 | - |
+| `-l, --list` | 目标文件路径 | - |
+| `--scan-type` | 扫描类型（fast/full/web/service） | fast |
+| `--ports, -p` | 指定端口 | - |
+| `--rate-limit` | 速率限制（每秒包数） | 0 |
+| `--timeout` | 超时时间（秒） | 1800 |
+| `--os-detection` | 操作系统检测 | False |
+| `--version-detection` | 版本检测 | True |
+| `--script` | NSE 脚本扫描 | - |
+| `--format` | 输出格式（json/xml/text） | json |
+| `--verbose, -v` | 详细输出 | False |
+| `--opts` | 附加参数 | - |
 
-- v1.0 (2026-03-26): 初始版本发布
-- 包含基础扫描、批量处理、数据提取功能
+## 程序化调用
 
+```python
+from main import scan
+
+result = scan(
+    targets=["192.168.1.0/24", "scanme.nmap.org"],
+    scan_type="fast",
+    ports="",
+    rate_limit=0,
+    timeout=1800,
+    os_detection=False,
+    version_detection=True,
+    script_scan="",
+    output_format="json",
+    verbose=False
+)
+
+print(f"扫描 {result['scan_stats']['targets_count']} 个目标")
+print(f"存活主机：{result['scan_stats']['hosts_up']}")
+for host in result.get('hosts', []):
+    print(f"  - {host.get('ip')} ({host.get('hostname')})")
+    print(f"    开放端口：{len(host.get('ports', []))}")
+```
+
+## 运行测试
+
+```bash
+python tests/test_nmap_skill.py
+```
+
+## 扫描类型说明
+
+- **fast**：快速扫描（-F -T4），扫描 1000 个常用端口
+- **full**：完整扫描（-p- -T4），扫描所有 65535 个端口
+- **web**：Web 服务扫描（80,443,8080,8443）
+- **service**：服务识别（-sV --version-intensity 5）
+
+## 注意事项
+
+1. **权限要求**：某些扫描功能（如 OS 检测）需要管理员权限
+2. **速率限制**：生产环境建议使用 `--rate-limit` 避免触发防火墙
+3. **超时设置**：批量扫描建议增加 `--timeout`
+4. **合法使用**：仅扫描授权的目标

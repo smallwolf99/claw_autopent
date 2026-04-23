@@ -47,9 +47,9 @@ class IntegrationTestResult:
         return "\n".join(lines)
 
 
-async def test_phase0_asset_collection(target: str) -> IntegrationTestResult:
-    """测试 Phase 0: 资产收集"""
-    result = IntegrationTestResult("Phase 0: 资产收集")
+async def test_phase1_asset_collection(target: str) -> IntegrationTestResult:
+    """测试 Phase 1: 资产收集"""
+    result = IntegrationTestResult("Phase 1: 资产收集")
     result.start_time = time.time()
     
     try:
@@ -277,11 +277,11 @@ async def run_integration_tests(target: str = "http://demo.testfire.net"):
     all_results.append(result)
     print(result)
     
-    # 测试 2: Phase 0 资产收集
+    # 测试 2: Phase 1 资产收集
     print("\n" + "=" * 60)
-    print("测试 2: Phase 0 资产收集")
+    print("测试 2: Phase 1 资产收集")
     print("=" * 60)
-    result = await test_phase0_asset_collection(target)
+    result = await test_phase1_asset_collection(target)
     all_results.append(result)
     print(result)
     

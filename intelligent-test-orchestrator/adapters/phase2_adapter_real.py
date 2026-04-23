@@ -29,9 +29,18 @@ from adapters.base_tool_adapter import BaseToolAdapter
 class Phase2Adapter(BaseToolAdapter):
     """Phase-2 漏洞检测适配器（真实工具调用）"""
     
+    ZAPCLI_PATHS = [
+        "zap-cli",  # PATH 中
+        "/home/ubuntu/.local/bin/zap-cli",
+        "~/.local/bin/zap-cli",
+        "/usr/local/bin/zap-cli",
+        "/usr/bin/zap-cli",
+    ]
+    
     def __init__(self, max_concurrent: int = 3):
         """初始化 Phase-2 适配器"""
         super().__init__(max_concurrent=max_concurrent)
+        self.zapcli_path = self._find_zapcli_path()
         self.tools = {
             'nuclei': self._call_nuclei,
             'afrog': self._call_afrog,
@@ -39,7 +48,38 @@ class Phase2Adapter(BaseToolAdapter):
             'zap': self._call_zap,
             'sqlmap': self._call_sqlmap,
         }
-        self.logger.info("Phase-2 漏洞检测适配器初始化完成（真实工具调用）")
+        self.logger.info(f"Phase-2 漏洞检测适配器初始化完成（真实工具调用）")
+        self.logger.info(f"ZAP-CLI 路径：{self.zapcli_path}")
+    
+    def _find_zapcli_path(self) -> str:
+        """查找 zap-cli 的可执行路径"""
+        import os
+        import subprocess
+        
+        for path in self.ZAPCLI_PATHS:
+            expanded_path = os.path.expanduser(path)
+            try:
+                # 检查文件是否存在且可执行
+                if os.path.isfile(expanded_path) and os.access(expanded_path, os.X_OK):
+                    return expanded_path
+            except:
+                continue
+        
+        # 尝试 which 命令
+        try:
+            result = subprocess.run(
+                ["which", "zap-cli"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                return result.stdout.strip()
+        except:
+            pass
+        
+        # 默认返回 zap-cli，让系统尝试在 PATH 中查找
+        return "zap-cli"
     
     async def detect(self, assets: List[Dict[str, Any]], 
                     test_strategy: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
@@ -358,22 +398,33 @@ class Phase2Adapter(BaseToolAdapter):
         # 检查 ZAP 是否运行
         zap_running = await self._check_zap_status()
         if not zap_running:
-            self.logger.warning("ZAP 服务未运行，跳过 ZAP 扫描")
-            return []
+            self.logger.warning("ZAP 服务未运行，尝试启动 ZAP...")
+            # 尝试自动启动 ZAP
+            started = await self._try_start_zap()
+            if not started:
+                self.logger.warning("无法启动 ZAP，跳过 ZAP 扫描")
+                self.logger.info("请手动启动 ZAP: zap-cli start")
+                return []
+            # 等待 ZAP 启动
+            await asyncio.sleep(3)
         
         report_file = f"/tmp/zap_report_{abs(hash(target))}.json"
-        cmd = f"zap-cli -p 8080 quick-scan -s all -f json -o {report_file} {target}"
+        cmd = f"{self.zapcli_path} -p 8080 quick-scan -s all -f json -o {report_file} {target}"
+        
+        self.logger.info(f"执行 ZAP 扫描：{cmd}")
         
         def parse_output(stdout: str, stderr: str) -> List[Dict[str, Any]]:
             vulnerabilities = []
             try:
                 import os
                 if os.path.exists(report_file):
+                    self.logger.info(f"读取 ZAP 报告：{report_file}")
                     with open(report_file, 'r') as f:
                         data = json.load(f)
                         sites = data.get('site', [])
                         if sites:
                             alerts = sites[0].get('alerts', [])
+                            self.logger.info(f"ZAP 发现 {len(alerts)} 个警报")
                             for alert in alerts:
                                 normalized = self._normalize_zap_vuln(alert, target)
                                 if normalized:
@@ -384,31 +435,136 @@ class Phase2Adapter(BaseToolAdapter):
                         os.remove(report_file)
                 else:
                     self.logger.warning(f"ZAP 报告文件不存在：{report_file}")
+                    self.logger.error(f"可能原因:")
+                    self.logger.error(f"  1. ZAP 扫描失败或被中断")
+                    self.logger.error(f"  2. 目标无法访问：{target}")
+                    self.logger.error(f"  3. ZAP 配置问题")
+                    self.logger.debug(f"stdout: {stdout[:1000] if stdout else 'empty'}")
+                    self.logger.debug(f"stderr: {stderr[:1000] if stderr else 'empty'}")
                     
             except (FileNotFoundError, json.JSONDecodeError, KeyError, IndexError) as e:
                 self.logger.error(f"读取 ZAP 报告失败：{e}")
-                self.logger.debug(f"stdout: {stdout}")
-                self.logger.debug(f"stderr: {stderr}")
+                self.logger.error(f"报告文件：{report_file}")
+                self.logger.debug(f"stdout: {stdout[:1000] if stdout else 'empty'}")
+                self.logger.debug(f"stderr: {stderr[:1000] if stderr else 'empty'}")
             
             return vulnerabilities
         
-        return await self.call_tool(
+        # 使用 call_tool_with_retry 增加重试机制
+        return await self.call_tool_with_retry(
             cmd=cmd,
             timeout=900,
-            parse_func=parse_output
+            parse_func=parse_output,
+            max_retries=2,
+            retry_delay=5
         )
     
-    async def _check_zap_status(self) -> bool:
-        """检查 ZAP 服务是否运行"""
+    def normalize_vulnerabilities(self, vulnerabilities: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """标准化漏洞格式
+        
+        Args:
+            vulnerabilities: 原始漏洞列表
+            
+        Returns:
+            标准化漏洞列表
+        """
+        normalized = []
+        
+        for vuln in vulnerabilities:
+            # 基础字段
+            norm_vuln = {
+                "id": vuln.get('id', 'UNKNOWN'),
+                "name": vuln.get('name', 'Unknown Vulnerability'),
+                "severity": vuln.get('severity', 'info').lower(),
+                "target": vuln.get('target', ''),
+                "description": vuln.get('description', ''),
+                "tool": vuln.get('tool', 'unknown'),
+                "verified": vuln.get('verified', False),
+                "cvss_score": vuln.get('cvss_score'),
+                "references": vuln.get('references', []),
+                "remediation": vuln.get('remediation', '')
+            }
+            
+            # ZAP 特有字段
+            if vuln.get('tool') == 'zap':
+                norm_vuln["cwe_id"] = vuln.get('cwe_id', [])
+                norm_vuln["confidence"] = vuln.get('confidence', 0.8)
+            
+            # Nuclei 特有字段
+            elif vuln.get('tool') == 'nuclei':
+                norm_vuln["tags"] = vuln.get('tags', [])
+                norm_vuln["template_id"] = vuln.get('template_id', '')
+            
+            # SQLMap 特有字段
+            elif vuln.get('tool') == 'sqlmap':
+                norm_vuln["injection_type"] = vuln.get('injection_type', '')
+                norm_vuln["technique"] = vuln.get('technique', '')
+            
+            normalized.append(norm_vuln)
+        
+        return normalized
+    
+    async def _try_start_zap(self) -> bool:
+        """尝试启动 ZAP 服务"""
         try:
-            cmd = "zap-cli status"
+            self.logger.info("尝试启动 ZAP 服务...")
+            cmd = f"{self.zapcli_path} start"
             result = await asyncio.create_subprocess_exec(
                 *cmd.split(),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
-            stdout, stderr = await asyncio.wait_for(result.communicate(), timeout=10)
-            return result.returncode == 0
+            stdout, stderr = await asyncio.wait_for(result.communicate(), timeout=30)
+            
+            if result.returncode == 0:
+                self.logger.info("ZAP 服务启动成功")
+                return True
+            else:
+                stderr_text = stderr.decode('utf-8', errors='replace').strip()
+                self.logger.warning(f"启动 ZAP 失败：{stderr_text}")
+                return False
+                
+        except Exception as e:
+            self.logger.warning(f"启动 ZAP 异常：{e}")
+            return False
+    
+    async def _check_zap_status(self) -> bool:
+        """检查 ZAP 服务是否运行"""
+        try:
+            # 尝试不同的端口和命令组合
+            commands_to_try = [
+                f"{self.zapcli_path} -p 8080 status",  # 指定端口 8080
+                f"{self.zapcli_path} status",  # 默认端口
+                f"{self.zapcli_path} -p 8090 status",  # 备用端口
+            ]
+            
+            for cmd in commands_to_try:
+                try:
+                    self.logger.debug(f"尝试检查 ZAP 状态：{cmd}")
+                    result = await asyncio.create_subprocess_exec(
+                        *cmd.split(),
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE
+                    )
+                    stdout, stderr = await asyncio.wait_for(result.communicate(), timeout=5)
+                    
+                    if result.returncode == 0:
+                        self.logger.info("ZAP 服务运行正常")
+                        return True
+                    
+                    # 记录错误信息
+                    stderr_text = stderr.decode('utf-8', errors='replace').strip()
+                    if stderr_text:
+                        self.logger.debug(f"ZAP 状态检查响应：{stderr_text}")
+                        
+                except Exception as e:
+                    self.logger.debug(f"命令 {cmd} 执行失败：{e}")
+                    continue
+            
+            # 所有命令都失败
+            self.logger.warning("ZAP 服务未响应（尝试了多个端口：8080, 默认，8090）")
+            return False
+            
         except Exception as e:
             self.logger.debug(f"检查 ZAP 状态失败：{e}")
             return False

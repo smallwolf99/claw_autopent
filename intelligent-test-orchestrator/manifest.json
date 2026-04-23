@@ -87,14 +87,16 @@
   ],
   
   "dependencies": [
-    "phase-0-asset-collection/whatweb-skill",
-    "phase-0-asset-collection/nmap-scanner",
-    "phase-0-asset-collection/httpx-skill",
-    "phase-0-asset-collection/subfinder",
-    "phase-0-asset-collection/katana",
-    "phase-2-vulnerability-scan/nuclei-scanner",
-    "phase-2-vulnerability-scan/afrog",
-    "phase-2-vulnerability-scan/nikto"
+    "nuclei",
+    "afrog",
+    "nikto",
+    "zap-cli",
+    "sqlmap",
+    "nmap",
+    "whatweb",
+    "httpx",
+    "subfinder",
+    "katana"
   ],
   
   "permissions": [

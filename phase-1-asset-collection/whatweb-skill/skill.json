@@ -1,7 +1,7 @@
 {
   "name": "whatweb",
-  "description": "Web指纹检测技能。封装whatweb命令用于批量资产技术栈识别。",
-  "version": "1.0.0",
+  "description": "Web 指纹检测技能。封装 whatweb 命令用于批量资产技术栈识别。",
+  "version": "1.1.0",
   "entry": "main.py",
   "type": "cli",
   "author": "安小易",
@@ -10,12 +10,29 @@
   ],
   "interface": {
     "scan": {
-      "desc": "批量或单URL指纹识别（目标、参数可配）",
+      "desc": "批量或单 URL 指纹识别（目标、参数可配）",
       "params": {
-        "targets": "目标URL字符串、批量文件或以逗号/分号/换行分割的URL",
-        "opts": "whatweb附加参数（如'-v -a 3'等，可选）"
+        "targets": "目标 URL 字符串、批量文件或以逗号/分号/换行分割的 URL",
+        "opts": "whatweb 附加参数（如'-v -a 3'等，可选）",
+        "output_format": "输出格式：json/text（默认 json）",
+        "aggression": "攻击性级别（1-5，默认 1）",
+        "plugins": "指定插件（逗号分隔，可选）",
+        "timeout": "超时时间（秒，默认 300）",
+        "verbose": "详细输出（默认 false）"
       },
-      "output": "字符串，whatweb原生输出"
+      "output": "结构化 JSON 结果，包含 status、count、results、technologies、unique_targets 字段"
     }
-  }
+  },
+  "features": [
+    "跨平台支持（Windows/Linux/macOS）",
+    "智能目标解析（单 URL/文件/列表）",
+    "Web 技术栈识别（CMS、服务器、语言等）",
+    "攻击性级别控制（1-5）",
+    "插件筛选",
+    "动态超时调整",
+    "自动临时文件管理",
+    "完整类型注解",
+    "结构化错误处理",
+    "JSON 结构化输出"
+  ]
 }

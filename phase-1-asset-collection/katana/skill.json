@@ -1,0 +1,42 @@
+{
+  "name": "katana",
+  "description": "Web 爬虫技能，封装调用 katana 进行 Web 页面爬取、目录枚举、端点发现、JS 解析和表单提取。",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "type": "cli",
+  "author": "安小易",
+  "dependencies": [
+    "katana"
+  ],
+  "interface": {
+    "crawl": {
+      "desc": "Web 页面爬取与端点发现（目标、深度、模式可配）",
+      "params": {
+        "targets": "目标 URL 列表，单条字符串或文件路径（-u/-l 自动识别）",
+        "depth": "爬取深度（默认 3，范围 1-10）",
+        "headless": "无头模式，渲染 JavaScript（默认 false）",
+        "js_crawl": "JS 端点解析（默认 false）",
+        "form_extraction": "表单提取（默认 false）",
+        "output_format": "输出格式：jsonl/json/txt（默认 jsonl）",
+        "rate_limit": "速率限制（请求/秒，默认 50）",
+        "delay": "请求延迟（秒，默认 0.2）",
+        "timeout": "超时时间（秒，默认 300）",
+        "concurrency": "并发数（默认 10）"
+      },
+      "output": "结构化 JSON 结果，包含 status、count、results、unique_urls 字段"
+    }
+  },
+  "features": [
+    "跨平台支持（Windows/Linux/macOS）",
+    "智能目标解析（单 URL/文件/列表）",
+    "双重爬取模式（普通/无头）",
+    "JS 端点解析（jsluice）",
+    "表单和输入字段提取",
+    "范围控制和过滤",
+    "速率限制和延迟控制",
+    "动态超时调整",
+    "自动临时文件管理",
+    "完整类型注解",
+    "结构化错误处理"
+  ]
+}

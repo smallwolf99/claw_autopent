@@ -1,0 +1,40 @@
+{
+  "name": "subfinder",
+  "description": "子域名枚举技能，封装调用 subfinder 进行被动 DNS 子域名发现和多数据源聚合。",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "type": "cli",
+  "author": "安小易",
+  "dependencies": [
+    "subfinder"
+  ],
+  "interface": {
+    "enumerate": {
+      "desc": "被动子域名枚举与数据源聚合（目标、数据源、性能可配）",
+      "params": {
+        "targets": "目标域名列表，单条字符串或文件路径（-d/-l 自动识别）",
+        "output_format": "输出格式：json/txt（默认 json）",
+        "recursive": "递归枚举（默认 false）",
+        "sources": "指定数据源（逗号分隔，可选）",
+        "threads": "并发线程数（默认 10）",
+        "rate_limit": "速率限制（每秒请求数，默认 0 表示不限）",
+        "timeout": "枚举超时（秒，默认 30）",
+        "httpx_verify": "httpx 存活验证（默认 false）"
+      },
+      "output": "结构化 JSON 结果，包含 status、count、results、unique_domains、sources 字段"
+    }
+  },
+  "features": [
+    "跨平台支持（Windows/Linux/macOS）",
+    "智能目标解析（单域名/文件/列表）",
+    "40+ 被动数据源聚合",
+    "递归子域名枚举",
+    "数据源筛选和排除",
+    "并发和速率控制",
+    "动态超时调整",
+    "自动临时文件管理",
+    "完整类型注解",
+    "结构化错误处理",
+    "httpx 存活验证集成"
+  ]
+}

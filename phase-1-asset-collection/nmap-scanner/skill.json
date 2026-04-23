@@ -1,0 +1,43 @@
+{
+  "name": "nmap-scanner",
+  "description": "网络端口扫描与资产发现技能，封装 nmap 命令进行批量端口扫描、服务识别、操作系统检测。",
+  "version": "1.1.0",
+  "entry": "main.py",
+  "type": "cli",
+  "author": "安小易",
+  "dependencies": [
+    "nmap"
+  ],
+  "interface": {
+    "scan": {
+      "desc": "批量或单目标端口扫描与服务识别（目标、端口、参数可配）",
+      "params": {
+        "targets": "扫描目标 IP、域名、网段或文件路径",
+        "scan_type": "扫描类型：fast/full/web/service（默认 fast）",
+        "ports": "指定端口（如：80,443 或 1-1000）",
+        "rate_limit": "速率限制（每秒包数，默认 0 表示不限）",
+        "timeout": "超时时间（秒，默认 1800）",
+        "os_detection": "操作系统检测（默认 false）",
+        "version_detection": "版本检测（默认 true）",
+        "script_scan": "NSE 脚本扫描（如：vuln,auth）",
+        "output_format": "输出格式：json/xml/text（默认 json）",
+        "verbose": "详细输出（默认 false）"
+      },
+      "output": "结构化 JSON 结果，包含 scan_stats、hosts 字段"
+    }
+  },
+  "features": [
+    "跨平台支持（Windows/Linux/macOS）",
+    "智能目标解析（单 IP/文件/列表/网段）",
+    "多种扫描类型（fast/full/web/service）",
+    "端口和服务识别",
+    "操作系统检测",
+    "NSE 脚本扫描",
+    "速率限制",
+    "动态超时调整",
+    "自动临时文件管理",
+    "完整类型注解",
+    "结构化错误处理",
+    "XML/JSON 结构化输出"
+  ]
+}

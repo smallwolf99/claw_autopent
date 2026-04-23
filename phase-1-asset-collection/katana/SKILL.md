@@ -19,6 +19,34 @@ Katana 是 ProjectDiscovery 开发的高速 Web 爬虫，专注于自动化渗�
 - **深度定制**：范围控制、过滤、速率限制、代理
 - **多格式输出**：JSON Lines / TXT / CSV / HTML
 
+## 快速开始
+
+### 基础用法
+
+```bash
+# 单目标快速爬取
+python main.py -u https://example.com
+
+# JS 端点解析 + 深度 5
+python main.py -u https://example.com --js-crawl --depth 5
+
+# 无头模式（适用于 SPA/React/Angular）
+python main.py -u https://example.com --headless
+
+# 表单提取
+python main.py -u https://example.com --form-extraction
+```
+
+### 批量爬取
+
+```bash
+# 从文件读取目标
+python main.py -l urls.txt --depth 3
+
+# 高并发模式
+python main.py -l urls.txt --concurrency 50 --rate-limit 100
+```
+
 ## 工作流程
 
 ### 第一步：环境检测
@@ -238,3 +266,69 @@ python scripts/parse_results.py katana_output.jsonl \
 | `scripts/auto_install.py` | 一键安装脚本（含 PATH 配置） |
 | `scripts/add_to_path.py` | 跨平台永久 PATH 配置 |
 | `scripts/parse_results.py` | JSON Lines 结果解析报告生成器 |
+| `main.py` | Python 主入口（跨平台优化版） |
+| `skill.json` | Skill 配置和接口定义 |
+
+## 完整参数
+
+| 参数 | 简写 | 说明 | 默认值 | 示例 |
+|------|------|------|--------|------|
+| `--url` | `-u` | 单个目标 URL | - | `-u https://example.com` |
+| `--list` | `-l` | 目标文件路径 | - | `-l urls.txt` |
+| `--depth` | `-d` | 爬取深度（1-10） | `3` | `--depth 5` |
+| `--headless` | `-hl` | 无头模式（渲染 JS） | `false` | `--headless` |
+| `--js-crawl` | `-jc` | JS 端点解析 | `false` | `--js-crawl` |
+| `--form-extraction` | `-fx` | 表单提取 | `false` | `--form-extraction` |
+| `--xhr-crawl` | - | XHR 请求爬取 | `false` | `--xhr-crawl` |
+| `--scope` | - | 范围过滤正则 | - | `--scope ".*example\\.com.*"` |
+| `--exclude-scope` | - | 排除范围正则 | - | `--exclude-scope ".*google\\.com.*"` |
+| `--extensions` | - | 扩展名匹配 | - | `--extensions "php,html,js"` |
+| `--filter-status` | - | 状态码过滤 | - | `--filter-status "status_code >= 200"` |
+| `--rate-limit` | - | 速率限制（请求/秒） | `50` | `--rate-limit 100` |
+| `--delay` | - | 请求延迟（秒） | `0.2` | `--delay 0.5` |
+| `--proxy` | - | 代理地址 | - | `--proxy "http://127.0.0.1:7890"` |
+| `--format` | - | 输出格式 | `jsonl` | `--format json` |
+| `--output` | `-o` | 输出文件路径 | - | `-o results.jsonl` |
+| `--fields` | - | 输出字段 | `url` | `--fields "url,path"` |
+| `--concurrency` | `-c` | 并发数 | `10` | `--concurrency 50` |
+| `--timeout` | - | 超时时间（秒） | `300` | `--timeout 600` |
+| `--parse` | - | 二次结构化输出 | `false` | `--parse` |
+
+## 程序化调用
+
+```python
+from main import crawl, run_katana, parse_katana_jsonl
+
+# 方式 1：使用标准 crawl 接口
+result = crawl(
+    targets=["https://a.com", "https://b.com"],
+    depth=5,
+    headless=False,
+    js_crawl=True,
+    form_extraction=False,
+    output_format="jsonl",
+    rate_limit=50,
+    delay=0.2,
+    timeout=300,
+    concurrency=10
+)
+
+print(f"发现 {result['count']} 个 URL，{result['unique_urls']} 个唯一 URL")
+for item in result['results']:
+    print(f"  {item.get('url')}")
+
+# 方式 2：直接调用 run_katana
+output = run_katana(
+    targets="https://example.com",
+    depth=3,
+    headless=True,
+    js_crawl=True,
+    form_extraction=True,
+    output_format="jsonl",
+    rate_limit=30,
+    delay=0.5
+)
+
+# 解析结果
+results = parse_katana_jsonl(output)
+```
