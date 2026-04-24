@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{报告标题}}</title>
+    <style>
+        /* ========== 基础样式 ========== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        /* ========== A4 纸张模拟（屏幕显示） ========== */
+        .a4-page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 20mm;
+            margin: 20px auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+            position: relative;
+        }
+        
+        /* ========== 封面页样式 ========== */
+        .cover-page {
+            background: linear-gradient(135deg, #e8f4f8 0%, #f5e8f4 100%);
+            width: 210mm;
+            height: 297mm;
+            padding: 25mm 20mm;
+            margin: 20px auto;
+            color: #2c3e50;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            page-break-after: always;
+            box-sizing: border-box;
+        }
+        
+        .cover-page .page-footer {
+            display: none !important; /* 封面不显示页脚 */
+        }
+        
+        .cover-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            z-index: 1;
+        }
+        
+        .cover-title {
+            font-size: 2.8em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .cover-subtitle {
+            font-size: 1.3em;
+            margin-bottom: 50px;
+            text-align: center;
+            opacity: 0.95;
+        }
+        
+        .cover-info-box {
+            background: rgba(255,255,255,0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.8);
+            border-radius: 8px;
+            padding: 25px 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        
+        .cover-info-item {
+            display: flex;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(200,200,200,0.3);
+            font-size: 1em;
+        }
+        
+        .cover-info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .cover-info-label {
+            font-weight: 600;
+            width: 120px;
+            flex-shrink: 0;
+            color: #555;
+        }
+        
+        .cover-info-value {
+            flex: 1;
+            color: #2c3e50;
+        }
+        
+        .cover-footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 0.9em;
+        }
+        
+        .cover-footer-warning {
+            color: #dc3545;
+            font-weight: 600;
+            margin-top: 10px;
+            text-align: center;
+        }
+        
+        /* ========== 报告正文样式 ========== */
+        .report-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #3498db;
+        }
+        
+        .report-title {
+            color: #2c3e50;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .report-subtitle {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            font-size: 1.8em;
+            margin: 30px 0 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+        }
+        
+        h2 {
+            color: #2c3e50;
+            font-size: 1.4em;
+            margin: 25px 0 15px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eee;
+            page-break-after: avoid;
+        }
+        
+        h3 {
+            color: #34495e;
+            font-size: 1.1em;
+            margin: 20px 0 10px 0;
+            page-break-after: avoid;
+        }
+        
+        p {
+            margin: 12px 0;
+            text-align: justify;
+            orphans: 3;
+            widows: 3;
+        }
+        
+        ul, ol {
+            margin: 12px 0;
+            padding-left: 30px;
+        }
+        
+        li {
+            margin: 8px 0;
+            page-break-inside: avoid;
+        }
+        
+        /* ========== 表格样式 ========== */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.9em;
+            table-layout: fixed;
+            page-break-inside: avoid;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px 12px;
+            text-align: left;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        thead {
+            display: table-header-group;
+        }
+        
+        tfoot {
+            display: table-footer-group;
+        }
+        
+        /* ========== 代码样式 ========== */
+        code {
+            background-color: #f1f3f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: Consolas, 'Courier New', monospace;
+            font-size: 0.85em;
+            color: #e83e8c;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+        
+        pre {
+            background-color: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            border: 1px solid #e9ecef;
+            font-size: 0.85em;
+            max-width: 100%;
+            page-break-inside: avoid;
+            margin: 15px 0;
+        }
+        
+        pre code {
+            background-color: transparent;
+            padding: 0;
+            color: #333;
+        }
+        
+        /* ========== 风险等级颜色 ========== */
+        .critical {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .high {
+            color: #fd7e14;
+            font-weight: bold;
+        }
+        
+        .medium {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        
+        .low {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .info {
+            color: #17a2b8;
+            font-weight: bold;
+        }
+        
+        /* ========== 信息框样式 ========== */
+        .info-box {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            page-break-inside: avoid;
+        }
+        
+        .warning-box {
+            background-color: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            page-break-inside: avoid;
+        }
+        
+        .danger-box {
+            background-color: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            page-break-inside: avoid;
+        }
+        
+        /* ========== 分页控制 ========== */
+        .page-break-before {
+            page-break-before: always;
+        }
+        
+        .page-break-after {
+            page-break-after: always;
+        }
+        
+        .page-break-inside-avoid {
+            page-break-inside: avoid;
+        }
+        
+        /* ========== 页眉页脚 ========== */
+        .page-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 10mm;
+            text-align: center;
+            font-size: 0.7em;
+            color: #999;
+            border-bottom: 1px solid #eee;
+            padding-top: 3mm;
+            display: none;
+            background: white;
+        }
+        
+        .page-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 10mm;
+            text-align: center;
+            font-size: 0.7em;
+            color: #999;
+            border-top: 1px solid #eee;
+            padding-bottom: 3mm;
+            display: none;
+            background: white;
+        }
+        
+        /* 封面不显示页眉页脚 */
+        .cover-page ~ .page-header,
+        .cover-page ~ .page-footer {
+            display: none !important;
+        }
+        
+        /* CSS 计数器 - 自动页码 */
+        body {
+            counter-reset: page;
+        }
+        
+        .a4-page {
+            counter-increment: page;
+        }
+        
+        /* ========== 打印优化 ========== */
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+                margin: 0;
+            }
+            
+            .a4-page, .cover-page {
+                width: 210mm;
+                margin: 0;
+                padding: 25mm 15mm 20mm 15mm; /* 上 25mm，下 20mm，左右 15mm */
+                box-shadow: none;
+                page-break-after: always;
+                position: relative;
+            }
+            
+            .cover-page {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                color-adjust: exact;
+            }
+            
+            /* 页面内的页眉页脚 */
+            .a4-page .page-header,
+            .a4-page .page-footer {
+                position: absolute;
+                left: 0;
+                right: 0;
+                height: 10mm;
+                background: white;
+                z-index: 1000;
+            }
+            
+            .a4-page .page-header {
+                top: 0;
+                border-bottom: 1px solid #eee;
+                padding-top: 3mm;
+            }
+            
+            .a4-page .page-footer {
+                bottom: 0;
+                border-top: 1px solid #eee;
+                padding-bottom: 3mm;
+            }
+            
+            /* 使用 CSS 计数器显示页码（从正文第 1 页开始） */
+            .a4-page .page-footer::after {
+                content: "第 " counter(page) " 页 / 共 " counter(pages) " 页";
+            }
+            
+            /* 分页控制 */
+            h1, h2, h3, h4, h5, h6 {
+                page-break-after: avoid;
+            }
+            
+            table, pre, .info-box, .warning-box, .danger-box {
+                page-break-inside: avoid;
+            }
+            
+            p {
+                orphans: 3;
+                widows: 3;
+            }
+            
+            /* 确保颜色打印 */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+        }
+        
+        /* ========== 屏幕显示优化 ========== */
+        @media screen {
+            .page-header, .page-footer {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 封面页 -->
+    <div class="cover-page">
+        <div class="cover-content">
+            <h1 class="cover-title"> 安全渗透测试报告</h1>
+            <p class="cover-subtitle">Security Penetration Testing Report</p>
+            
+            <div class="cover-info-box">
+                <div class="cover-info-item">
+                    <span class="cover-info-label">目标系统</span>
+                    <span class="cover-info-value">{{目标系统名称}}</span>
+                </div>
+                <div class="cover-info-item">
+                    <span class="cover-info-label">测试时间</span>
+                    <span class="cover-info-value">{{测试时间}}</span>
+                </div>
+                <div class="cover-info-item">
+                    <span class="cover-info-label">测试人员</span>
+                    <span class="cover-info-value">{{测试人员}}</span>
+                </div>
+                <div class="cover-info-item">
+                    <span class="cover-info-label">报告版本</span>
+                    <span class="cover-info-value">{{报告版本}}</span>
+                </div>
+                <div class="cover-info-item">
+                    <span class="cover-info-label">风险等级</span>
+                    <span class="cover-info-value">{{风险等级}}</span>
+                </div>
+            </div>
+            
+            <div class="cover-footer">
+                <p class="cover-footer-warning">机密文件 · 授权访问 · 严禁外传</p>
+                <p class="cover-footer-warning">CONFIDENTIAL - AUTHORIZED PERSONNEL ONLY</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 报告正文 -->
+    <div class="a4-page">
+        <!-- 页眉 -->
+        <div class="page-header">安全渗透测试报告</div>
+        
+        <!-- 报告标题 -->
+        <h1>1. 执行摘要</h1>
+        <p>{{执行摘要内容}}</p>
+        
+        <h2>1.1 整体安全态势</h2>
+        <p>{{整体安全态势描述}}</p>
+        
+        <h2>1.2 风险评估矩阵</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 20%;">风险等级</th>
+                    <th style="width: 15%;">数量</th>
+                    <th style="width: 65%;">影响描述</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span class="critical">🔴 严重</span></td>
+                    <td>{{严重数量}}</td>
+                    <td>{{严重影响描述}}</td>
+                </tr>
+                <tr>
+                    <td><span class="high">🟠 高危</span></td>
+                    <td>{{高危数量}}</td>
+                    <td>{{高危影响描述}}</td>
+                </tr>
+                <tr>
+                    <td><span class="medium">🟡 中危</span></td>
+                    <td>{{中危数量}}</td>
+                    <td>{{中危影响描述}}</td>
+                </tr>
+                <tr>
+                    <td><span class="low">🟢 低危</span></td>
+                    <td>{{低危数量}}</td>
+                    <td>{{低危影响描述}}</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <!-- 第二章：测试概述 -->
+        <h1>2. 测试概述</h1>
+        
+        <h2>2.1 测试范围</h2>
+        <p>{{测试范围描述}}</p>
+        
+        <div class="info-box">
+            <strong>📌 测试目标：</strong>
+            <p style="margin-top: 10px;">{{测试目标}}</p>
+        </div>
+        
+        <h2>2.2 测试方法</h2>
+        <ul>
+            <li>{{测试方法 1}}</li>
+            <li>{{测试方法 2}}</li>
+            <li>{{测试方法 3}}</li>
+            <li>{{测试方法 4}}</li>
+        </ul>
+        
+        <!-- 第三章：漏洞详情 -->
+        <h1>3. 漏洞详情</h1>
+        
+        <h2>3.1 漏洞 #1：{{漏洞名称}}</h2>
+        <table>
+            <tr>
+                <th style="width: 25%;">漏洞地址</th>
+                <td><code>{{漏洞地址}}</code></td>
+            </tr>
+            <tr>
+                <th>风险等级</th>
+                <td><span class="{{风险等级类名}}">{{风险等级}}</span></td>
+            </tr>
+            <tr>
+                <th>发现时间</th>
+                <td>{{发现时间}}</td>
+            </tr>
+            <tr>
+                <th>PoC 验证</th>
+                <td><code>{{PoC}}</code></td>
+            </tr>
+        </table>
+        
+        <div class="warning-box">
+            <strong>⚠️ 安全影响：</strong>
+            <p style="margin-top: 10px;">{{安全影响描述}}</p>
+        </div>
+        
+        <div class="info-box">
+            <strong>💡 修复建议：</strong>
+            <p style="margin-top: 10px;">{{修复建议}}</p>
+        </div>
+        
+        <!-- 代码示例 -->
+        <h3>漏洞利用示例：</h3>
+        <pre><code>{{漏洞利用代码}}</code></pre>
+        
+        <!-- 第四章：结论与建议 -->
+        <h1>4. 结论与建议</h1>
+        
+        <h2>4.1 整体结论</h2>
+        <p>{{整体结论}}</p>
+        
+        <div class="danger-box">
+            <strong>🔴 紧急建议：</strong>
+            <ul style="margin-top: 10px;">
+                <li>{{紧急建议 1}}</li>
+                <li>{{紧急建议 2}}</li>
+                <li>{{紧急建议 3}}</li>
+            </ul>
+        </div>
+        
+        <h2>4.2 长期建议</h2>
+        <ol>
+            <li>{{长期建议 1}}</li>
+            <li>{{长期建议 2}}</li>
+            <li>{{长期建议 3}}</li>
+        </ol>
+        
+        <!-- 页脚 -->
+        <div class="page-footer"></div>
+    </div>
+    
+
+</body>
+</html>

@@ -10,16 +10,17 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             line-height: 1.6;
             color: #333;
-            max-width: 1000px;
+            max-width: 210mm;  /* A4 宽度 */
             margin: 0 auto;
-            padding: 20px;
+            padding: 15px;
             background-color: #f5f7fa;
         }
         .container {
             background-color: #fff;
-            padding: 40px;
+            padding: 20px;  /* 减小 padding */
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 100%;
         }
         h1, h2, h3 {
             color: #2c3e50;
@@ -38,12 +39,15 @@
             width: 100%;
             border-collapse: collapse;
             margin: 20px 0;
-            font-size: 0.95em;
+            font-size: 0.9em;  /* 减小字体 */
+            table-layout: fixed;  /* 固定表格布局，防止溢出 */
         }
         th, td {
             border: 1px solid #ddd;
-            padding: 12px 15px;
+            padding: 10px 12px;  /* 减小 padding */
             text-align: left;
+            word-wrap: break-word;  /* 自动换行 */
+            overflow-wrap: break-word;
         }
         th {
             background-color: #f8f9fa;
@@ -58,20 +62,27 @@
             padding: 2px 6px;
             border-radius: 4px;
             font-family: Consolas, monospace;
-            font-size: 0.9em;
+            font-size: 0.85em;  /* 减小字体 */
             color: #e83e8c;
+            word-wrap: break-word;  /* 自动换行 */
+            overflow-wrap: break-word;
+            white-space: pre-wrap;
         }
         pre {
             background-color: #f8f9fa;
-            padding: 15px;
+            padding: 12px;  /* 减小 padding */
             border-radius: 6px;
             overflow-x: auto;
             border: 1px solid #e9ecef;
+            max-width: 100%;  /* 限制宽度 */
+            font-size: 0.85em;
         }
         pre code {
             background-color: transparent;
             padding: 0;
             color: #333;
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
         .critical {
             color: #dc3545;
@@ -117,13 +128,311 @@
             border-top: 1px solid #eee;
             padding-top: 20px;
         }
+        /* 封面页样式 - 与正文保持一致 */
+        .cover-page {
+            background: #f5f7fa;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 60px 40px;
+            margin: -20px;
+            color: #333;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            page-break-after: always;
+        }
+        .cover-content {
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        .cover-title-section {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+        .cover-main-title {
+            color: #2c3e50;
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 15px;
+            display: inline-block;
+        }
+        .cover-subtitle {
+            color: #7f8c8d;
+            font-size: 1.1em;
+            margin-top: 15px;
+            font-weight: normal;
+        }
+        .cover-info-box {
+            background-color: #fff;
+            padding: 35px 45px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 40px;
+        }
+        .cover-info-item {
+            display: flex;
+            padding: 14px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 1em;
+            line-height: 1.6;
+        }
+        .cover-info-item:last-child {
+            border-bottom: none;
+        }
+        .cover-info-label {
+            font-weight: bold;
+            color: #2c3e50;
+            width: 140px;
+            flex-shrink: 0;
+        }
+        .cover-info-value {
+            flex: 1;
+            color: #333;
+        }
+        .cover-footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 25px;
+            border-top: 1px solid #eee;
+            color: #7f8c8d;
+            font-size: 0.85em;
+        }
+        .cover-footer p {
+            margin: 8px 0;
+        }
+        .cover-warning-text {
+            color: #dc3545;
+            font-weight: bold;
+            margin-top: 12px;
+            font-size: 1.05em;
+        }
+        /* 打印优化 */
+        @media print {
+            .cover-page {
+                min-height: 100vh;
+                margin: 0;
+                page-break-after: always;
+            }
+            body > .container:first-child {
+                display: none;
+            }
+        }
+        
+        /* PDF 打印优化样式 */
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+                margin: 0;
+                max-width: 210mm;
+                width: 210mm;
+            }
+            
+            .container {
+                box-shadow: none;
+                padding: 15px;
+                margin: 0;
+                max-width: 100%;
+                width: 100%;
+            }
+            
+            /* 封面单独一页 */
+            .cover-page {
+                page-break-after: always;
+                break-after: page;
+                width: 210mm;
+                margin: 0;
+                padding: 20mm 15mm;
+            }
+            
+            /* 避免在元素内部断页 */
+            h1, h2, h3, h4, h5, h6 {
+                page-break-after: avoid;
+                break-after: avoid;
+                margin-top: 1em;
+            }
+            
+            /* 表格避免在中间断页 */
+            table {
+                page-break-inside: avoid;
+                break-inside: avoid;
+                width: 100% !important;
+            }
+            
+            /* 列表项避免断页 */
+            li {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            
+            /* 代码块避免断页，并自动换行 */
+            pre, code {
+                page-break-inside: avoid;
+                break-inside: avoid;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                max-width: 100%;
+                font-size: 0.85em;
+            }
+            
+            /* 图片自适应 */
+            img {
+                max-width: 100%;
+                page-break-inside: avoid;
+            }
+            
+            /* 段落优化 */
+            p {
+                orphans: 3;
+                widows: 3;
+                line-height: 1.5;
+            }
+            
+            /* 确保章节从新页开始 */
+            h2 {
+                page-break-before: avoid;
+            }
+            
+            /* 表格跨页时显示表头 */
+            thead {
+                display: table-header-group;
+            }
+            
+            /* 表格跨页时显示表尾 */
+            tfoot {
+                display: table-footer-group;
+            }
+            
+            /* 移除不必要的元素 */
+            .no-print {
+                display: none !important;
+            }
+            
+            /* 确保颜色打印 */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+            
+            /* 链接显示完整 URL */
+            a[href]:after {
+                content: " (" attr(href) ")";
+                font-size: 0.8em;
+            }
+            
+            /* 限制内容宽度，防止溢出 */
+            * {
+                max-width: 100%;
+            }
+        }
+        
+        /* 分页控制类 */
+        .page-break-before {
+            page-break-before: always;
+            break-before: page;
+        }
+        
+        .page-break-after {
+            page-break-after: always;
+            break-after: page;
+        }
+        
+        .page-break-inside-avoid {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        
+        /* 打印时的页眉页脚 */
+        @media print {
+            body::before {
+                content: "DVWA 综合安全测试报告 - 机密文件";
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                text-align: center;
+                font-size: 0.75em;
+                color: #999;
+                padding: 5px;
+                border-bottom: 1px solid #eee;
+                height: 15px;
+            }
+            
+            body::after {
+                content: "第 " counter(page) " 页 / 共 " counter(pages) " 页";
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                text-align: center;
+                font-size: 0.75em;
+                color: #999;
+                padding: 5px;
+                border-top: 1px solid #eee;
+                height: 15px;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- 封面页 -->
+    <div class="cover-page">
+        <div class="cover-content">
+            <div class="cover-title-section">
+                <h1 class="cover-main-title">📋 DVWA 综合安全测试报告</h1>
+                <p class="cover-subtitle">Comprehensive Security Penetration Testing Report</p>
+            </div>
+            
+            <div class="cover-info-box">
+                <div class="cover-info-item">
+                    <span class="cover-info-label">目标系统</span>
+                    <span class="cover-info-value">DVWA (Damn Vulnerable Web Application)</span>
+                </div>
+                <div class="cover-info-item">
+                    <span class="cover-info-label">目标 URL</span>
+                    <span class="cover-info-value">http://172.16.8.151:4280/</span>
+                </div>
+                <div class="cover-info-item">
+                    <span class="cover-info-label">测试时间</span>
+                    <span class="cover-info-value">2026-04-22 10:25 - 12:45</span>
+                </div>
+                <div class="cover-info-item">
+                    <span class="cover-info-label">测试人员</span>
+                    <span class="cover-info-value">安小易 008 (高级安全渗透测试专家)</span>
+                </div>
+                <div class="cover-info-item">
+                    <span class="cover-info-label">报告版本</span>
+                    <span class="cover-info-value">v1.0 | 2026-04-22</span>
+                </div>
+                <div class="cover-info-item">
+                    <span class="cover-info-label">风险等级</span>
+                    <span class="cover-info-value" style="color: #dc3545; font-weight: bold;">🔴 极度危险</span>
+                </div>
+            </div>
+            
+            <div class="cover-footer">
+                <p>本报告包含敏感安全信息，仅限授权人员查阅</p>
+                <p>CONFIDENTIAL - AUTHORIZED PERSONNEL ONLY</p>
+                <p class="cover-warning-text">⚠️ 机密文件 · 授权访问 · 严禁外传</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 报告正文 -->
     <div class="container">
-        <h1>📋 DVWA综合安全测试报告</h1>
-<h2>📋 报告信息</h2>
-<ul>
+        <h1>📋 DVWA 综合安全测试报告</h1>
+        
+        <h2 class="page-break-before">📋 报告信息</h2>
+        <ul class="page-break-inside-avoid">
 <li><strong>目标系统</strong>: DVWA (Damn Vulnerable Web Application)</li>
 <li><strong>目标URL</strong>: http://172.16.8.151:4280/</li>
 <li><strong>IP地址</strong>: 172.16.8.151</li>
@@ -134,7 +443,8 @@
 <li><strong>报告版本</strong>: 1.0 (智能编排版)</li>
 <li><strong>报告日期</strong>: 2026-04-22</li>
 </ul>
-<h2>📊 执行摘要</h2>
+
+<h2 class="page-break-before">📊 执行摘要</h2>
 <h3>⚠️ 整体安全态势: <strong>极度危险</strong></h3>
 <p>本次对DVWA漏洞测试环境进行智能编排渗透测试，共发现漏洞<strong>21</strong>个，其中严重(Critical)漏洞<strong>7</strong>个；高危(High)漏洞<strong>4</strong>个；中危(Medium)漏洞<strong>2</strong>个；信息暴露(Info)<strong>8</strong>个。因此判定其安全风险为<strong>危急</strong>。</p>
 <h3>🔴 关键发现:</h3>
@@ -178,9 +488,11 @@
 </tbody>
 </table>
 <h3>📈 修复紧迫性: <strong>立即</strong></h3>
-<p>所有验证的严重和高危漏洞应立即修复，具体修复建议详见“结论与建议”章节。</p>
-<hr />
-<h2>📋 测试概述</h2>
+<p>所有验证的严重和高危漏洞应立即修复，具体修复建议详见"结论与建议"章节。</p>
+
+<hr class="page-break-after" />
+
+<h2 class="page-break-before">📋 测试概述</h2>
 <h3>🎯 测试范围</h3>
 <p>本次安全测试覆盖DVWA系统的全面安全评估，采用智能编排和自主学习模式，包括：</p>
 <ol>
@@ -194,12 +506,15 @@
 <li><strong>信息收集</strong>: Basic-Intel-Gatherer, Nmap, Httpx, WhatWeb, Katana</li>
 <li><strong>漏洞扫描</strong>: Nuclei, Afrog, Nikto</li>
 <li><strong>手动验证</strong>: 基于自动化工具发现的线索，进行手动深度利用(如SQL盲注测试、XSS组合测试)</li>
-<li><strong>智能关联</strong>: 将单独发现的漏洞组合成完整的攻击利用链(Kill Chain)</li>
+<li><strong>智能关联</strong>: 将单独发现的漏洞组合成完整的攻击利用链 (Kill Chain)</li>
 </ul>
-<hr />
-<h2>🔴 核心漏洞发现汇总</h2>
-<h3>1. 漏洞名称：<strong>SQL注入 (UNION-based &amp; 盲注)</strong></h3>
-<ul>
+
+<hr class="page-break-after" />
+
+<h2 class="page-break-before">🔴 核心漏洞发现汇总</h2>
+
+<h3 class="page-break-inside-avoid">1. 漏洞名称：<strong>SQL 注入 (UNION-based &amp; 盲注)</strong></h3>
+<ul class="page-break-inside-avoid">
 <li><strong>漏洞地址</strong>: <code>http://172.16.8.151:4280/vulnerabilities/sqli/</code></li>
 <li><strong>风险等级</strong>: <span class="critical">🔴 严重</span> (Critical)</li>
 <li><strong>发现时间</strong>: 2026-04-22 11:45</li>

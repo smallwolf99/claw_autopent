@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试封面 - 科技商务风格</title>
+    <style>
+        /* 基础样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+        
+        /* ========== 封面页样式 ========== */
+        .cover-page {
+            background: linear-gradient(135deg, #e8eaf6 0%, #e3f2fd 50%, #ede7f6 100%);
+            width: 210mm;
+            height: 297mm;
+            padding: 30mm 20mm;
+            margin: 20px auto;
+            color: #1a2332;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            page-break-after: always;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        
+        .cover-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .cover-title {
+            font-size: 3em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+            background: linear-gradient(135deg, #1a2332 0%, #233140 50%, #2a3f50 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 2px 2px 4px rgba(26, 35, 50, 0.3), 0 0 20px rgba(26, 35, 50, 0.15);
+            letter-spacing: 2px;
+        }
+        
+        .cover-subtitle {
+            font-size: 1.4em;
+            margin-bottom: 60px;
+            text-align: center;
+            color: #374785;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+        
+        .cover-info-box {
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(26, 35, 50, 0.2);
+            border-radius: 12px;
+            padding: 30px 35px;
+            margin-bottom: 35px;
+            box-shadow: 0 2px 8px rgba(26, 35, 50, 0.04);
+        }
+        
+        .cover-info-item {
+            display: flex;
+            padding: 14px 0;
+            border-bottom: 1px solid rgba(26, 35, 50, 0.15);
+            font-size: 1.05em;
+        }
+        
+        .cover-info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .cover-info-label {
+            font-weight: 600;
+            width: 130px;
+            flex-shrink: 0;
+            color: #1a2332;
+        }
+        
+        .cover-info-value {
+            flex: 1;
+            color: #233140;
+            font-weight: 500;
+        }
+        
+        .cover-footer {
+            text-align: center;
+            margin-top: 50px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .cover-footer-warning {
+            color: #d32f2f;
+            font-weight: 700;
+            font-size: 1em;
+            letter-spacing: 1.5px;
+            margin: 8px 0;
+        }
+        
+        .cover-page .page-footer {
+            display: none !important;
+        }
+        
+        .container {
+            width: 210mm;
+            max-width: 210mm;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 40px;
+            box-sizing: border-box;
+        }
+        
+        /* 响应式设计 */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+                margin: 0;
+            }
+            
+            .cover-page, .container {
+                width: 210mm;
+                margin: 0;
+                padding: 25mm 20mm;
+                box-shadow: none;
+                page-break-after: always;
+                position: relative;
+                box-sizing: border-box;
+            }
+            
+            .cover-page {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                color-adjust: exact;
+            }
+            
+            .container {
+                border-radius: 0;
+            }
+            
+            .no-print {
+                display: none;
+            }
+            
+            /* CSS 计数器 - 自动页码 */
+            body {
+                counter-reset: page;
+            }
+            
+            .container {
+                counter-increment: page;
+            }
+            
+            /* 页脚页码 */
+            .container .footer {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 10mm;
+                background: white;
+                z-index: 1000;
+                border-top: 1px solid #eee;
+                padding-bottom: 3mm;
+            }
+            
+            .container .footer::after {
+                content: "第 " counter(page) " 页 / 共 " counter(pages) " 页";
+            }
+            
+            /* 分页控制 */
+            h1, h2, h3, h4 {
+                page-break-after: avoid;
+            }
+            
+            table, pre {
+                page-break-inside: avoid;
+            }
+            
+            /* 确保颜色打印 */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 封面页 -->
+    <div class="cover-page">
+        <div class="cover-content">
+            <h1 class="cover-title">安全渗透测试报告</h1>
+            <p class="cover-subtitle">Security Penetration Testing Report</p>
+            
+            <div class="cover-info-box">
+                <div class="cover-info-item">
+                    <span class="cover-info-label">目标系统</span>
+                    <span class="cover-info-value">https://example.com</span>
+                </div>
+                <div class="cover-info-item">
+                    <span class="cover-info-label">测试时间</span>
+                    <span class="cover-info-value">2026-04-23 15:30:00</span>
+                </div>
+                <div class="cover-info-item">
+                    <span class="cover-info-label">测试人员</span>
+                    <span class="cover-info-value">安小易 008</span>
+                </div>
+                <div class="cover-info-item">
+                    <span class="cover-info-label">报告版本</span>
+                    <span class="cover-info-value">v1.0</span>
+                </div>
+                <div class="cover-info-item">
+                    <span class="cover-info-label">风险等级</span>
+                    <span class="cover-info-value">高风险</span>
+                </div>
+            </div>
+            
+            <div class="cover-footer">
+                <p class="cover-footer-warning">机密文件 · 授权访问 · 严禁外传</p>
+                <p class="cover-footer-warning">CONFIDENTIAL - AUTHORIZED PERSONNEL ONLY</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 报告正文 -->
+    <div class="container">
+        <div class="header">
+            <h1 class="report-title">安全扫描报告</h1>
+            <div class="report-subtitle">专业安全评估报告 - 2026-04-23</div>
+            
+            <div class="meta-info">
+                <div class="meta-item">
+                    <span class="meta-label">生成时间:</span>
+                    <span>2026-04-23 15:30:00</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">模板版本:</span>
+                    <span>template_professional</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">报告状态:</span>
+                    <span>正式版本</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">保密等级:</span>
+                    <span>内部使用</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <h1>1. 执行摘要</h1>
+            <p>本次安全渗透测试共发现 5 个漏洞，其中高风险 2 个，中风险 2 个，低风险 1 个。</p>
+            
+            <h2>2. 漏洞详情</h2>
+            <h3>2.1 SQL 注入漏洞</h3>
+            <p><strong>风险等级：</strong><span class="risk-high">高风险</span></p>
+            <p><strong>漏洞位置：</strong>http://example.com/login.php</p>
+            <p><strong>漏洞描述：</strong>在登录页面存在 SQL 注入漏洞，攻击者可以通过构造恶意 SQL 语句绕过身份验证。</p>
+            
+            <h3>2.2 XSS 跨站脚本漏洞</h3>
+            <p><strong>风险等级：</strong><span class="risk-medium">中风险</span></p>
+            <p><strong>漏洞位置：</strong>http://example.com/search.php</p>
+            <p><strong>漏洞描述：</strong>搜索功能未对用户输入进行充分过滤，导致可以执行恶意 JavaScript 代码。</p>
+            
+            <h2>3. 修复建议</h2>
+            <ol>
+                <li>使用参数化查询防止 SQL 注入</li>
+                <li>对所有用户输入进行 HTML 实体编码</li>
+                <li>实施内容安全策略（CSP）</li>
+                <li>定期进行安全审计和漏洞扫描</li>
+            </ol>
+        </div>
+        
+        <div class="footer">
+            <p>© 2026 安全渗透测试专家团队 | 本报告仅限授权人员内部使用</p>
+            <p class="footer-note">报告生成时间：2026-04-23 15:30:00 | 模板：template_professional</p>
+            <p class="footer-note no-print">建议使用 Chrome 或 Edge 浏览器查看本报告以获得最佳体验</p>
+        </div>
+    </div>
+    
+    <style>
+        .report-title {
+            font-size: 32px;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .report-subtitle {
+            font-size: 18px;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+        
+        .meta-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+        }
+        
+        .meta-label {
+            font-weight: bold;
+            margin-right: 5px;
+            color: #2c3e50;
+        }
+        
+        .risk-high {
+            color: #e74c3c;
+            font-weight: bold;
+            background-color: #ffe6e6;
+            padding: 2px 8px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        
+        .risk-medium {
+            color: #f39c12;
+            font-weight: bold;
+            background-color: #fff3cd;
+            padding: 2px 8px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        
+        h1, h2, h3 {
+            color: #2c3e50;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+        }
+        
+        h1 {
+            font-size: 28px;
+            border-left: 5px solid #3498db;
+            padding-left: 15px;
+        }
+        
+        h2 {
+            font-size: 24px;
+            border-left: 4px solid #2ecc71;
+            padding-left: 12px;
+        }
+        
+        h3 {
+            font-size: 20px;
+            border-left: 3px solid #f39c12;
+            padding-left: 10px;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            color: #7f8c8d;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .footer-note {
+            font-style: italic;
+            margin-top: 10px;
+        }
+    </style>
+</body>
+</html>

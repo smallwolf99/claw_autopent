@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        /* 基础样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+        
+        /* ========== 封面页样式 ========== */
+        .cover-page {
+            background: linear-gradient(135deg, #e8eaf6 0%, #e3f2fd 50%, #ede7f6 100%);
+            width: 210mm;
+            height: 297mm;
+            padding: 30mm 20mm;
+            margin: 20px auto;
+            color: #1a2332;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            page-break-after: always;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        
+        .cover-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .cover-title {
+            font-size: 3em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+            background: linear-gradient(135deg, #1a2332 0%, #233140 50%, #2a3f50 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 2px 2px 4px rgba(26, 35, 50, 0.3), 0 0 20px rgba(26, 35, 50, 0.15);
+            letter-spacing: 2px;
+        }
+        
+        .cover-subtitle {
+            font-size: 1.4em;
+            margin-bottom: 60px;
+            text-align: center;
+            color: #374785;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+        
+        .cover-info-box {
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(26, 35, 50, 0.2);
+            border-radius: 12px;
+            padding: 30px 35px;
+            margin-bottom: 35px;
+            box-shadow: 0 8px 16px rgba(26, 35, 50, 0.08);
+        }
+        
+        .cover-info-item {
+            display: flex;
+            padding: 14px 0;
+            border-bottom: 1px solid rgba(26, 35, 50, 0.15);
+            font-size: 1.05em;
+        }
+        
+        .cover-info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .cover-info-label {
+            font-weight: 600;
+            width: 130px;
+            flex-shrink: 0;
+            color: #1a2332;
+        }
+        
+        .cover-info-value {
+            flex: 1;
+            color: #233140;
+            font-weight: 500;
+        }
+        
+        .cover-footer {
+            text-align: center;
+            margin-top: 50px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .cover-footer-warning {
+            color: #d32f2f;
+            font-weight: 700;
+            font-size: 1em;
+            letter-spacing: 1.5px;
+            margin: 8px 0;
+        }
+        
+        .cover-page .page-footer {
+            display: none !important;
+        }
+        
+        .container {
+            width: 210mm;
+            max-width: 210mm;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 40px;
+            box-sizing: border-box;
+        }
+        
+        /* 页眉 */
+        .header {
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .report-title {
+            font-size: 32px;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .report-subtitle {
+            font-size: 18px;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+        
+        .meta-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+        }
+        
+        .meta-label {
+            font-weight: bold;
+            margin-right: 5px;
+            color: #2c3e50;
+        }
+        
+        /* 内容区域 */
+        .content {
+            margin-top: 30px;
+        }
+        
+        h1, h2, h3, h4 {
+            color: #2c3e50;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+        }
+        
+        h1 {
+            font-size: 28px;
+            border-left: 5px solid #3498db;
+            padding-left: 15px;
+        }
+        
+        h2 {
+            font-size: 24px;
+            border-left: 4px solid #2ecc71;
+            padding-left: 12px;
+        }
+        
+        h3 {
+            font-size: 20px;
+            border-left: 3px solid #f39c12;
+            padding-left: 10px;
+        }
+        
+        /* 表格样式 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        th {
+            background-color: #2c3e50;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        tr:hover {
+            background-color: #e9ecef;
+        }
+        
+        /* 风险等级样式 */
+        .risk-high {
+            color: #e74c3c;
+            font-weight: bold;
+            background-color: #ffe6e6;
+            padding: 2px 8px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        
+        .risk-medium {
+            color: #f39c12;
+            font-weight: bold;
+            background-color: #fff3cd;
+            padding: 2px 8px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        
+        .risk-low {
+            color: #27ae60;
+            font-weight: bold;
+            background-color: #d4edda;
+            padding: 2px 8px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        
+        .risk-info {
+            color: #3498db;
+            font-weight: bold;
+            background-color: #d6eaf8;
+            padding: 2px 8px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        
+        /* 代码块 */
+        pre {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+        }
+        
+        code {
+            background-color: #f8f9fa;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        /* 列表样式 */
+        ul, ol {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+        
+        li {
+            margin-bottom: 5px;
+        }
+        
+        /* 页脚 */
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            color: #7f8c8d;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .footer-note {
+            font-style: italic;
+            margin-top: 10px;
+        }
+        
+        /* 响应式设计 */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+                margin: 0;
+            }
+            
+            .cover-page, .container {
+                width: 210mm;
+                margin: 0;
+                padding: 25mm 20mm;
+                box-shadow: none;
+                page-break-after: always;
+                position: relative;
+                box-sizing: border-box;
+            }
+            
+            .cover-page {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                color-adjust: exact;
+            }
+            
+            .container {
+                border-radius: 0;
+            }
+            
+            .no-print {
+                display: none;
+            }
+            
+            /* CSS 计数器 - 自动页码 */
+            body {
+                counter-reset: page;
+            }
+            
+            .container {
+                counter-increment: page;
+            }
+            
+            /* 页脚页码 */
+            .container .footer {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 10mm;
+                background: white;
+                z-index: 1000;
+                border-top: 1px solid #eee;
+                padding-bottom: 3mm;
+            }
+            
+            .container .footer::after {
+                content: "第 " counter(page) " 页 / 共 " counter(pages) " 页";
+            }
+            
+            /* 分页控制 */
+            h1, h2, h3, h4 {
+                page-break-after: avoid;
+            }
+            
+            table, pre {
+                page-break-inside: avoid;
+            }
+            
+            /* 确保颜色打印 */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .report-title {
+                font-size: 24px;
+            }
+            
+            .report-subtitle {
+                font-size: 16px;
+            }
+            
+            table {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 封面页 -->
+    <div class="cover-page">
+        <div class="cover-content">
+            <h1 class="cover-title">安全渗透测试报告</h1>
+            <p class="cover-subtitle">Security Penetration Testing Report</p>
+            
+            <div class="cover-info-box">
+                <div class="cover-info-item">
+                    <span class="cover-info-label">目标系统</span>
+                    <span class="cover-info-value">{{ target if target else "未指定" }}</span>
+                </div>
+                <div class="cover-info-item">
+                    <span class="cover-info-label">测试时间</span>
+                    <span class="cover-info-value">{{ generation_date if generation_date else "未指定" }}</span>
+                </div>
+                <div class="cover-info-item">
+                    <span class="cover-info-label">测试人员</span>
+                    <span class="cover-info-value">{{ tester if tester else "安小易 008" }}</span>
+                </div>
+                <div class="cover-info-item">
+                    <span class="cover-info-label">报告版本</span>
+                    <span class="cover-info-value">{{ version if version else "v1.0" }}</span>
+                </div>
+                <div class="cover-info-item">
+                    <span class="cover-info-label">风险等级</span>
+                    <span class="cover-info-value">{{ risk_level if risk_level else "待评估" }}</span>
+                </div>
+            </div>
+            
+            <div class="cover-footer">
+                <p class="cover-footer-warning">机密文件 · 授权访问 · 严禁外传</p>
+                <p class="cover-footer-warning">CONFIDENTIAL - AUTHORIZED PERSONNEL ONLY</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 报告正文 -->
+    <div class="container">
+         
+        <div class="content">
+            <!-- Markdown内容将在这里渲染 -->
+            {{ content }}
+        </div>
+        
+        <div class="footer">
+            <p>© 2026 安全渗透测试专家团队 | 本报告仅限授权人员内部使用</p>
+            <p class="footer-note">报告生成时间: {{ generation_date }} | 模板: {{ template_name }}</p>
+            <p class="footer-note no-print">建议使用Chrome或Edge浏览器查看本报告以获得最佳体验</p>
+        </div>
+    </div>
+    
+    <script>
+        // 自动处理风险等级样式
+        document.addEventListener('DOMContentLoaded', function() {
+            // 查找所有风险等级标记并应用样式
+            const riskElements = document.querySelectorAll('p, td, li');
+            riskElements.forEach(el => {
+                const text = el.textContent || el.innerHTML;
+                
+                // 检查高风险标记
+                if (text.includes('🔴') || text.includes('高风险') || text.includes('High')) {
+                    el.innerHTML = el.innerHTML.replace('🔴', '<span class="risk-high">🔴 高风险</span>');
+                    el.innerHTML = el.innerHTML.replace('高风险', '<span class="risk-high">高风险</span>');
+                    el.innerHTML = el.innerHTML.replace('High', '<span class="risk-high">High</span>');
+                }
+                
+                // 检查中风险标记
+                if (text.includes('🟡') || text.includes('中风险') || text.includes('Medium')) {
+                    el.innerHTML = el.innerHTML.replace('🟡', '<span class="risk-medium">🟡 中风险</span>');
+                    el.innerHTML = el.innerHTML.replace('中风险', '<span class="risk-medium">中风险</span>');
+                    el.innerHTML = el.innerHTML.replace('Medium', '<span class="risk-medium">Medium</span>');
+                }
+                
+                // 检查低风险标记
+                if (text.includes('🟢') || text.includes('低风险') || text.includes('Low')) {
+                    el.innerHTML = el.innerHTML.replace('🟢', '<span class="risk-low">🟢 低风险</span>');
+                    el.innerHTML = el.innerHTML.replace('低风险', '<span class="risk-low">低风险</span>');
+                    el.innerHTML = el.innerHTML.replace('Low', '<span class="risk-low">Low</span>');
+                }
+                
+                // 检查信息类标记
+                if (text.includes('ℹ️') || text.includes('信息类') || text.includes('Informational')) {
+                    el.innerHTML = el.innerHTML.replace('ℹ️', '<span class="risk-info">ℹ️ 信息类</span>');
+                    el.innerHTML = el.innerHTML.replace('信息类', '<span class="risk-info">信息类</span>');
+                    el.innerHTML = el.innerHTML.replace('Informational', '<span class="risk-info">Informational</span>');
+                }
+            });
+            
+            // 为打印优化
+            const style = document.createElement('style');
+            style.textContent = `
+                @media print {
+                    @page { margin: 1cm; }
+                    body { font-size: 12pt; }
+                    h1 { page-break-before: always; }
+                    h2, h3 { page-break-after: avoid; }
+                    table { page-break-inside: avoid; }
+                    pre { page-break-inside: avoid; }
+                }
+            `;
+            document.head.appendChild(style);
+        });
+    </script>
+</body>
+</html>

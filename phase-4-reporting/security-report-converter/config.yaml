@@ -4,16 +4,22 @@ templates:
   professional: template_professional.html
   simple: template_simple.html
   executive: template_executive.html
+  a4_professional: template_a4_professional.html
+  simple_body: template_simple_body.html
+  technical: template_technical.html
 
 styles:
   professional: style_professional.css
   simple: style_simple.css
   executive: style_executive.css
+  a4_professional: style_professional.css
+  simple_body: style_professional.css  # 使用相同的样式文件
+  technical: style_professional.css  # 暂时使用相同样式
 
 output:
   html_extension: .html
   pdf_extension: .pdf
-  default_template: professional
+  default_template: simple_body
 
 metadata:
   default_author: "安全渗透测试专家团队"

@@ -138,7 +138,7 @@ def main():
     parser.add_argument('-o', '--output', required=True, help='输出文件前缀（不含扩展名）')
     parser.add_argument('-f', '--format', choices=['html', 'pdf', 'all'], default='all', 
                        help='输出格式：html, pdf, all (默认: all)')
-    parser.add_argument('-t', '--template', choices=['professional', 'simple', 'executive'], 
+    parser.add_argument('-t', '--template', choices=['professional', 'simple', 'executive', 'a4_professional', 'simple_body', 'technical'], 
                        default='professional', help='模板类型 (默认: professional)')
     parser.add_argument('--title', help='报告标题（默认从文件提取）')
     parser.add_argument('--author', default='安全团队', help='报告作者 (默认: 安全团队)')

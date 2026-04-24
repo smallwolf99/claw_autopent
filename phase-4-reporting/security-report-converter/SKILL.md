@@ -55,7 +55,7 @@ python3 scripts/convert_report.py -i zap_summary.md -o security_report
 | `--input` | `-i` | ✅ | - | 输入Markdown文件路径 |
 | `--output` | `-o` | ✅ | - | 输出文件前缀（不含扩展名） |
 | `--format` | `-f` | ❌ | `all` | 输出格式：`html`, `pdf`, `all` |
-| `--template` | `-t` | ❌ | `professional` | 模板类型：`professional`, `simple`, `executive` |
+| `--template` | `-t` | ❌ | `professional` | 模板类型：`professional`, `simple`, `executive`, `technical`, `simple_body`, `a4_professional` |
 | `--title` | | ❌ | 从文件提取 | 报告标题 |
 | `--author` | | ❌ | "安全团队" | 报告作者 |
 | `--date` | | ❌ | 当前日期 | 报告日期 |
@@ -69,14 +69,26 @@ python3 scripts/convert_report.py -i zap_summary.md -o security_report
    - 详细技术细节表格
    - 修复建议代码块
 
-2. **simple** - 简洁易读报告
-   - 简约设计，突出重点
-   - 适合非技术人员阅读
+2. **executive** - 高管摘要报告
+   - 简洁明了，突出风险等级轻重缓急
+   - 业务影响分析，风险量化指标
+   - 修复成本估算，行动优先级
 
-3. **executive** - 高管摘要报告
-   - 业务影响分析
-   - 风险量化指标
-   - 修复成本估算
+3. **technical** - 专业技术团队报告
+   - 高级代码块支持（行号、语言标签）
+   - 步骤编号系统，技术术语解释
+   - 漏洞详情卡片，工具参数表格
+   - 适合技术团队实施和知识存档
+
+4. **simple_body** - 极致简化打印优化报告
+   - 极度简化CSS，超大边距（3cm）防止内容溢出
+   - 100%打印可靠性，兼容所有PDF阅读器
+   - 适合技术打印、批量生成、兼容性要求高场景
+
+5. **a4_professional** - A4纸优化专业报告
+   - 针对A4纸打印优化，完美分页控制
+   - 封面页设计，专业视觉风格
+   - 适合正式汇报和客户交付
 
 ### 自定义模板
 在 `templates/` 目录中添加自己的HTML模板：
@@ -167,6 +179,22 @@ subprocess.run([
     "--format", "all",
     "--template", "professional"
 ])
+```
+
+### 示例3：不同模板使用场景
+
+```bash
+# 1. 高管汇报 - 简洁明了，突出风险等级
+python3 scripts/convert_report.py -i report.md -o executive_report -t executive
+
+# 2. 技术团队 - 详细专业，可操作性强
+python3 scripts/convert_report.py -i report.md -o technical_report -t technical
+
+# 3. 打印优化 - 超大边距，100%打印可靠
+python3 scripts/convert_report.py -i report.md -o simple_body_report -t simple_body
+
+# 4. 正式交付 - A4纸优化，专业视觉
+python3 scripts/convert_report.py -i report.md -o a4_report -t a4_professional
 ```
 
 ## 🛠️ 故障排除

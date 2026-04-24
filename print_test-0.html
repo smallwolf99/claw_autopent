@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>打印测试 - A4 预览</title>
+    <style>
+        /* A4 纸张模拟 */
+        .a4-page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 20mm;
+            margin: 20px auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            text-align: center;
+        }
+        
+        h2 {
+            color: #2c3e50;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+            margin-top: 1.5em;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.9em;
+            table-layout: fixed;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px 12px;
+            text-align: left;
+            word-wrap: break-word;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+        
+        code {
+            background-color: #f1f3f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: Consolas, monospace;
+            font-size: 0.85em;
+            color: #e83e8c;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+        
+        pre {
+            background-color: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            border: 1px solid #e9ecef;
+            font-size: 0.85em;
+            max-width: 100%;
+        }
+        
+        .test-section {
+            margin: 30px 0;
+            page-break-inside: avoid;
+        }
+        
+        .print-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #3498db;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .print-button:hover {
+            background: #2980b9;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            
+            .a4-page {
+                box-shadow: none;
+                margin: 0;
+                padding: 20mm 15mm;
+            }
+            
+            .print-button {
+                display: none;
+            }
+            
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-button" onclick="window.print()">🖨️ 打印为 PDF</button>
+    
+    <div class="a4-page">
+        <h1>📋 A4 打印测试页面</h1>
+        
+        <div class="test-section">
+            <h2>1. 文本测试</h2>
+            <p>这是一段普通文本，用于测试打印效果。DVWA（Damn Vulnerable Web Application）是一个存在多种漏洞的 Web 应用程序，用于安全测试和学习。</p>
+        </div>
+        
+        <div class="test-section">
+            <h2>2. 表格测试</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>风险等级</th>
+                        <th>数量</th>
+                        <th>影响描述</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span style="color: #dc3545; font-weight: bold;">🔴 严重</span></td>
+                        <td>7</td>
+                        <td>系统完全控制、数据完全泄露、认证完全绕过</td>
+                    </tr>
+                    <tr>
+                        <td><span style="color: #fd7e14; font-weight: bold;">🟠 高危</span></td>
+                        <td>4</td>
+                        <td>账户劫持、用户攻击、敏感操作被伪造</td>
+                    </tr>
+                    <tr>
+                        <td><span style="color: #ffc107; font-weight: bold;">🟡 中危</span></td>
+                        <td>2</td>
+                        <td>弱密码、客户端验证逻辑可被轻易绕过</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="test-section">
+            <h2>3. 代码测试</h2>
+            <p>短代码示例：<code>id=1' UNION SELECT user,password FROM users--</code></p>
+            
+            <p>长代码示例（自动换行测试）：</p>
+            <pre>http://172.16.8.151:4280/vulnerabilities/sqli/?id=1' UNION SELECT user,password FROM users--&Submit=Submit</pre>
+            
+            <p>多行代码：</p>
+            <pre>POST /vulnerabilities/sqli/ HTTP/1.1
+Host: 172.16.8.151:4280
+Content-Type: application/x-www-form-urlencoded
+Cookie: PHPSESSID=abc123; security=low
+
+id=1' AND 1=1 UNION SELECT NULL,CONCAT(username,0x3a,password) FROM users--&Submit=Submit</pre>
+        </div>
+        
+        <div class="test-section">
+            <h2>4. 列表测试</h2>
+            <ol>
+                <li><strong>资产收集与信息侦察</strong>: 端口扫描、指纹识别、目录枚举</li>
+                <li><strong>全面漏洞扫描</strong>: 使用 Nuclei、Afrog 等工具进行自动化漏洞发现</li>
+                <li><strong>专项深度挖掘</strong>: 针对 SQL 注入、XSS、命令注入等核心模块进行手动深度验证</li>
+                <li><strong>智能编排挖掘</strong>: 关联分析、漏洞组合、未测试模块探索及高级攻击链构建</li>
+            </ol>
+        </div>
+        
+        <div class="test-section">
+            <h2>5. 分页测试</h2>
+            <p>以下内容应该在同一页内，不会被分页打断：</p>
+            <div style="page-break-inside: avoid; border: 2px solid #3498db; padding: 15px; margin: 20px 0;">
+                <h3>📌 重要信息块</h3>
+                <p>这个区块使用了 <code>page-break-inside: avoid</code> 样式，确保在打印时不会被分页打断。</p>
+                <ul>
+                    <li>要点 1：内容完整性</li>
+                    <li>要点 2：阅读体验</li>
+                    <li>要点 3：专业呈现</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>6. 颜色测试</h2>
+            <p><span style="color: #dc3545; font-weight: bold;">红色 - 严重 (Critical)</span></p>
+            <p><span style="color: #fd7e14; font-weight: bold;">橙色 - 高危 (High)</span></p>
+            <p><span style="color: #ffc107; font-weight: bold;">黄色 - 中危 (Medium)</span></p>
+            <p><span style="color: #17a2b8; font-weight: bold;">蓝色 - 信息 (Info)</span></p>
+        </div>
+        
+        <div class="test-section">
+            <h2>7. 页面边距测试</h2>
+            <p>此页面使用了 20mm 的上下边距和 15mm 的左右边距，确保打印时内容不会太靠近纸张边缘。</p>
+            <p>打印预览时，请检查：</p>
+            <ul>
+                <li>✓ 左右边距是否合适</li>
+                <li>✓ 上下边距是否合适</li>
+                <li>✓ 内容是否完整显示</li>
+                <li>✓ 表格是否被截断</li>
+                <li>✓ 代码是否自动换行</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
